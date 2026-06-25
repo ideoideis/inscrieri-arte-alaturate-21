@@ -85,6 +85,31 @@ const fmtCountdown = (ms: number): string => {
   return `${p(h)}:${p(m)}:${p(s)}`;
 };
 
+// Render multi-paragraph copy as clean, separated blocks (not a wall of text).
+function Paragraphs({ text }: { text: string }) {
+  return (
+    <div className="space-y-3">
+      {text
+        .split(/\n{2,}/)
+        .map((para, i) => (
+          <p key={i} className="text-[15px] leading-relaxed text-foreground/90 whitespace-pre-line">
+            {para.trim()}
+          </p>
+        ))}
+    </div>
+  );
+}
+
+// Small red section heading with an accent tick.
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="h-0.5 w-5 bg-primary" />
+      <h4 className="text-primary text-xs font-bold uppercase tracking-widest">{children}</h4>
+    </div>
+  );
+}
+
 export default function Index() {
   const { workshops, groups, config, isOpen, msToOpen, loading, ready, loadKids, kidEnrollment, enroll } =
     useEnrollment();
@@ -483,16 +508,16 @@ export default function Index() {
                       <span className="text-xs text-muted-foreground truncate">{w.trainer}</span>
                     </div>
                     <h3 className="text-base md:text-xl font-bold leading-tight">{w.workshopTitle}</h3>
-                    <p className="hidden md:block mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-3 whitespace-pre-line">
-                      {w.workshopDescription}
+                    <p className="mt-1 md:mt-2 text-sm text-muted-foreground leading-snug line-clamp-2">
+                      {w.tagline}
                     </p>
                     {hasDetails && (
                       <button
                         type="button"
                         onClick={() => setDetailsSlug(w.slug)}
-                        className="mt-1.5 md:mt-2 self-start text-sm font-semibold text-primary underline underline-offset-2"
+                        className="mt-2 self-start inline-flex items-center gap-1 text-sm font-semibold text-primary"
                       >
-                        Vezi detalii
+                        Vezi detalii →
                       </button>
                     )}
 
@@ -544,41 +569,62 @@ export default function Index() {
 
       {/* Details dialog */}
       <Dialog open={!!detailsSlug} onOpenChange={(o) => !o && setDetailsSlug(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[88vh] overflow-y-auto">
           {detailsWorkshop && (
-            <>
-              <DialogHeader>
-                <span className="micro-label">
-                  {detailsWorkshop.trainer} · {detailsWorkshop.discipline}
-                </span>
-                <DialogTitle className="text-2xl">{detailsWorkshop.workshopTitle}</DialogTitle>
-              </DialogHeader>
-              {detailsWorkshop.photo && (
-                <img
-                  src={photoSrc(detailsWorkshop)}
-                  alt={detailsWorkshop.trainer}
-                  className="w-full aspect-[16/10] object-cover grayscale"
-                  style={{ objectPosition: detailsWorkshop.focal ?? "center top" }}
-                  onError={(e) => {
-                    e.currentTarget.src = `${import.meta.env.BASE_URL}placeholder.svg`;
-                  }}
-                />
-              )}
-              {detailsWorkshop.bio && (
-                <div>
-                  <h4 className="micro-label">Despre trainer</h4>
-                  <p className="mt-2 text-sm leading-relaxed whitespace-pre-line">
-                    {detailsWorkshop.bio}
-                  </p>
+            <div className="space-y-6">
+              {/* Header: portrait + title block */}
+              <DialogHeader className="space-y-0 text-left">
+                <div className="flex gap-4">
+                  <div className="relative w-24 sm:w-28 shrink-0 aspect-[3/4] bg-secondary overflow-hidden">
+                    {detailsWorkshop.photo ? (
+                      <img
+                        src={photoSrc(detailsWorkshop)}
+                        alt={detailsWorkshop.trainer}
+                        className="h-full w-full object-cover grayscale"
+                        style={{ objectPosition: detailsWorkshop.focal ?? "center top" }}
+                        onError={(e) => {
+                          e.currentTarget.src = `${import.meta.env.BASE_URL}placeholder.svg`;
+                        }}
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-[0.55rem] uppercase tracking-widest text-white/40 text-center px-1">
+                        foto în curând
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex flex-col justify-center">
+                    <span className="text-primary text-xs font-bold uppercase tracking-widest">
+                      {detailsWorkshop.discipline}
+                    </span>
+                    <DialogTitle className="mt-1 text-2xl leading-tight">
+                      {detailsWorkshop.workshopTitle}
+                    </DialogTitle>
+                    <p className="mt-1.5 text-sm text-muted-foreground">cu {detailsWorkshop.trainer}</p>
+                  </div>
                 </div>
+              </DialogHeader>
+
+              {/* Live spots */}
+              <div className="border-y border-border py-3">{renderSpots(detailsWorkshop.slug)}</div>
+
+              {/* What you'll do */}
+              <section>
+                <SectionTitle>Ce vom face</SectionTitle>
+                <div className="mt-3">
+                  <Paragraphs text={detailsWorkshop.workshopDescription} />
+                </div>
+              </section>
+
+              {/* About the trainer */}
+              {detailsWorkshop.bio && (
+                <section>
+                  <SectionTitle>Despre trainer</SectionTitle>
+                  <div className="mt-3">
+                    <Paragraphs text={detailsWorkshop.bio} />
+                  </div>
+                </section>
               )}
-              <div>
-                <h4 className="micro-label">Despre atelier</h4>
-                <p className="mt-2 text-sm leading-relaxed whitespace-pre-line">
-                  {detailsWorkshop.workshopDescription}
-                </p>
-              </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
