@@ -15,6 +15,7 @@ export type Workshop = {
   trainer: string; // trainer full name
   discipline: string; // short tag, e.g. "Dans"
   photo: string; // filename inside public/trainers/  (or "" for placeholder)
+  focal?: string; // CSS object-position to keep the face in frame, e.g. "center 20%"
   bio: string; // trainer bio (may be long; shown in a details dialog)
   workshopTitle: string; // workshop name (mirror of aa_workshops.titlu)
   workshopDescription: string; // what the kids will do
@@ -35,6 +36,7 @@ export const WORKSHOPS: Workshop[] = [
     trainer: "Filip Stoica",
     discipline: "Dans",
     photo: "filip-stoica.jpg",
+    focal: "center 20%",
     bio: `Filip Stoica este coregraf și artist, specializat în dans contemporan, contact improvisation și diverse stiluri de street dance. Și-a început cariera prin breakdance, iar după absolvirea secției de coregrafie a UNATC a descoperit dansul contemporan și contact improvisation, care i-au permis să exploreze noi moduri de exprimare.
 
 A colaborat cu Centrul Național al Dansului București (CNDB), Linotip — Centru Independent Coregrafic, Teatrul Național București și Muzeul MINA, precum și cu alte teatre din București și din țară. Stilul său îmbină mișcările dinamice și acrobatice cu fluiditatea și sensibilitatea contactului fizic, în creații adesea interdisciplinare, ce integrează elemente de teatru, circ și arte vizuale.`,
@@ -50,6 +52,7 @@ Structura include încălzire, exerciții de coordonare și ritm, secvențe core
     trainer: "Tudor Platon",
     discipline: "Film",
     photo: "tudor-platon.jpg",
+    focal: "center 30%",
     bio: `Tudor Platon este regizor de documentar și director de imagine. Debutul său regizoral, „Casa cu păpuși" (2020), a avut premiera la Festivalul de Film de la Sarajevo și a fost selectat la TIFF, Zagreb Dox, Biografilm și Astra Film Festival. Al doilea lungmetraj, „O familie aproape perfectă", a avut premiera la Ji.hlava IDFF 2024, în competiția Opus Bonum.
 
 Ca director de imagine a lucrat la peste douăzeci de filme de ficțiune și documentar, printre care „Anul Nou care n-a fost" (Premiul pentru cel mai bun film — Veneția 2024, Orizzonti), „Cadoul de Crăciun" (Premiul Academiei Europene de Film pentru scurtmetraj, 2018) și „4:15 P.M. Sfârșitul lumii" (nominalizat la Palme d'Or pentru scurtmetraj — Cannes 2016). Este membru al Academiei Europene de Film.`,
@@ -63,6 +66,7 @@ Vom lucra într-un cadru de învățare pe orizontală, unde participanții și 
     trainer: "Delia Riciu",
     discipline: "Improvizație",
     photo: "delia-riciu.jpg",
+    focal: "center 25%",
     bio: `Sunt Delia Riciu și practic improvizația de 16 ani, atât ca performer, cât și ca trainer. Predau aproape zilnic și, de vreo 8 ani încoace, particip la o mulțime de festivaluri europene. În momentul de față am show-uri săptămânale la The Fool, alături de colegii din Loja Comediei.`,
     workshopTitle: "Improv 101",
     workshopDescription: `La Ideo Ideis nu vin cu rețete sau reguli bătute în cuie. Vin cu jocuri. Cu exerciții. Cu întrebări. Cu energia aia specială care apare când oameni care nu se cunosc încep să creeze împreună — fără să planifice totul dinainte.
@@ -76,6 +80,7 @@ Dacă ți se pare că „nu știi ce să spui" sau „ți-e frică să greșeșt
     trainer: "Teo Velescu",
     discipline: "Dans",
     photo: "teo-velescu.jpg",
+    focal: "center 20%",
     bio: `Teodora Velescu este coregrafă și dansatoare stabilită în București. S-a specializat în dans clasic la Liceul de Coregrafie „Floria Capsali" și a obținut licența în coregrafie și masteratul în pedagogia dansului la UNATC, unde este în prezent doctorandă în Teatru și Artele Spectacolului.
 
 Colaborează cu instituții precum Teatrul Național București, Opera Națională București, Opera Comică pentru Copii și Centrul Național al Dansului, dar și cu companii independente (Tangaj Collective, Vanner Collective, Linotip). A performat în festivaluri naționale și internaționale și a curatoriat primele două ediții ale festivalului HazarDance, parte din Romanian Creative Week.`,
@@ -91,6 +96,7 @@ Imaginație, inspirație, emoție, creație, vocație, meditație, vibrație —
     trainer: "Șteff Chelaru",
     discipline: "Costume",
     photo: "steff-chelaru.jpg",
+    focal: "center 25%",
     bio: `Șteff Chelaru a absolvit Moda la Facultatea de Arte Decorative și Design (UNArte București), licență și master, apoi scenografia la UNATC „I.L. Caragiale" (2022). A colaborat cu Teatrul Național București, Teatrul Odeon, Teatrul Metropolis, Teatrul Mic, unteatru, Opera Națională București, ARCUB, Teatrul „Andrei Mureșanu" Sfântu Gheorghe, Teatrul German de Stat Timișoara și Teatrul Masca.
 
 Pentru ea contează enorm comunicarea și sinceritatea celuilalt om din echipă, mai ales relația cu regizorul — o colaborare repetată până ajung la același limbaj vizual și emoțional. „Sunt, de fapt, colegi de emoții teatrale."`,
