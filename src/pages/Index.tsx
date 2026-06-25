@@ -499,13 +499,25 @@ export default function Index() {
                           <div className="py-2.5 text-center text-sm text-muted-foreground border border-border">
                             Te-ai înscris la alt atelier
                           </div>
+                        ) : isOpen && s.full ? (
+                          <Button className="w-full h-11 text-base font-bold" disabled>
+                            Locuri epuizate
+                          </Button>
+                        ) : isOpen && !kidId ? (
+                          <Button
+                            variant="outline"
+                            className="w-full h-11 text-base font-semibold"
+                            onClick={() => scrollTo("identitate")}
+                          >
+                            Întâi alege-ți numele ↑
+                          </Button>
                         ) : isOpen ? (
                           <Button
                             className="w-full h-11 text-base font-bold"
-                            disabled={s.full || claiming}
+                            disabled={claiming}
                             onClick={() => setPendingSlug(w.slug)}
                           >
-                            {s.full ? "Locuri epuizate" : "Înscrie-mă"}
+                            Înscrie-mă
                           </Button>
                         ) : (
                           <div className="py-2.5 text-center text-sm text-muted-foreground border border-dashed border-border">
