@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, Loader2, Radio, Star, Users, X } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, Radio, Users } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -26,7 +26,6 @@ import { WORKSHOPS, type Workshop } from "@/data/workshops";
 import etichetaLogo from "@/assets/eticheta-ideoideis.png";
 
 const LS_KEY = "aa21_kid";
-const MAX_PICKS = 3;
 
 type Saved = {
   kidId: string;
@@ -34,7 +33,7 @@ type Saved = {
   groupId: string;
   groupName: string;
   enrolledSlug: string | null;
-  picks: string[];
+  pick: string | null;
 };
 
 const loadSaved = (): Saved | null => {
@@ -52,7 +51,7 @@ const saveSaved = (patch: Partial<Saved>) => {
     groupId: "",
     groupName: "",
     enrolledSlug: null,
-    picks: [],
+    pick: null,
   };
   localStorage.setItem(LS_KEY, JSON.stringify({ ...cur, ...patch }));
 };
@@ -100,20 +99,20 @@ export default function Index() {
   const [enrolledSlug, setEnrolledSlug] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
-  const [picks, setPicks] = useState<string[]>([]);
-  const [pendingClaim, setPendingClaim] = useState<string[] | null>(null);
+  const [pick, setPick] = useState<string | null>(null); // single favorite
+  const [pendingSlug, setPendingSlug] = useState<string | null>(null);
   const [detailsSlug, setDetailsSlug] = useState<string | null>(null);
   const [claiming, setClaiming] = useState(false);
   const [justEnrolled, setJustEnrolled] = useState<string | null>(null);
 
-  // Restore identity + picks from this device.
+  // Restore identity + favorite from this device.
   useEffect(() => {
     const s = loadSaved();
     if (s) {
       setGroupId(s.groupId);
       setKidId(s.kidId);
       setEnrolledSlug(s.enrolledSlug);
-      setPicks(s.picks ?? []);
+      setPick(s.pick ?? null);
       if (s.groupId) loadKids(s.groupId).then(setKids);
     }
   }, [loadKids]);
@@ -139,17 +138,11 @@ export default function Index() {
     saveSaved({ kidId: value, kidName, groupId, groupName, enrolledSlug: slug });
   };
 
-  const togglePick = (slug: string) => {
-    setPicks((curr) => {
-      let next: string[];
-      if (curr.includes(slug)) next = curr.filter((s) => s !== slug);
-      else if (curr.length >= MAX_PICKS) {
-        toast.info(`Poți alege maximum ${MAX_PICKS} ateliere.`);
-        return curr;
-      } else next = [...curr, slug];
-      saveSaved({ picks: next });
-      return next;
-    });
+  // Single favorite — tap to choose, tap again to clear (radio-style).
+  const choose = (slug: string) => {
+    const next = pick === slug ? null : slug;
+    setPick(next);
+    saveSaved({ pick: next });
   };
 
   const stateFor = (slug: string) => {
@@ -161,58 +154,38 @@ export default function Index() {
     return { row, capacity, taken, remaining, full };
   };
 
-  const succeed = (slug: string) => {
-    setEnrolledSlug(slug);
-    saveSaved({ enrolledSlug: slug });
-    setJustEnrolled(slug);
-    setPendingClaim(null);
-    setDetailsSlug(null);
-  };
-
-  // Claim in order of preference; fall back to the next pick if one is full.
-  const claimWithFallback = async (slugs: string[]) => {
+  const claim = async (slug: string) => {
     if (!kidId || claiming) return;
+    const { row } = stateFor(slug);
+    if (!row) return;
     setClaiming(true);
-    try {
-      for (let i = 0; i < slugs.length; i++) {
-        const slug = slugs[i];
-        const { row } = stateFor(slug);
-        if (!row) continue;
-        const status = await enroll(kidId, row.id);
-        const title = WORKSHOPS.find((w) => w.slug === slug)?.workshopTitle ?? slug;
-        if (status === "ok") {
-          succeed(slug);
-          toast.success(`Te-ai înscris la ${title}! 🎉`);
-          return;
-        }
-        if (status === "already") {
-          const cur = await kidEnrollment(kidId);
-          setEnrolledSlug(cur);
-          if (cur) saveSaved({ enrolledSlug: cur });
-          toast.info("Ești deja înscris/ă la un atelier.");
-          setPendingClaim(null);
-          return;
-        }
-        if (status === "closed") {
-          toast.error("Înscrierile nu sunt deschise în acest moment.");
-          setPendingClaim(null);
-          return;
-        }
-        if (status === "full") {
-          const more = i < slugs.length - 1;
-          toast.info(`${title} s-a umplut${more ? " — încercăm următoarea alegere…" : "."}`);
-          continue;
-        }
-        toast.error("A apărut o eroare. Mai încearcă o dată.");
-        setPendingClaim(null);
-        return;
+    const status = await enroll(kidId, row.id);
+    setClaiming(false);
+    setPendingSlug(null);
+    const title = WORKSHOPS.find((w) => w.slug === slug)?.workshopTitle ?? slug;
+    switch (status) {
+      case "ok":
+        setEnrolledSlug(slug);
+        saveSaved({ enrolledSlug: slug });
+        setJustEnrolled(slug);
+        setDetailsSlug(null);
+        break;
+      case "full":
+        toast.error(`${title} s-a umplut — alege rapid alt atelier.`);
+        document.getElementById("ateliere")?.scrollIntoView({ behavior: "smooth" });
+        break;
+      case "already": {
+        const cur = await kidEnrollment(kidId);
+        setEnrolledSlug(cur);
+        if (cur) saveSaved({ enrolledSlug: cur });
+        toast.info("Ești deja înscris/ă la un atelier.");
+        break;
       }
-      // All chosen workshops are full.
-      toast.error("Toate alegerile tale s-au umplut. Alege rapid un atelier cu locuri libere.");
-      setPendingClaim(null);
-      document.getElementById("ateliere")?.scrollIntoView({ behavior: "smooth" });
-    } finally {
-      setClaiming(false);
+      case "closed":
+        toast.error("Înscrierile nu sunt deschise în acest moment.");
+        break;
+      default:
+        toast.error("A apărut o eroare. Mai încearcă o dată.");
     }
   };
 
@@ -220,13 +193,8 @@ export default function Index() {
   const kidName = kids.find((k) => k.id === kidId)?.nume ?? loadSaved()?.kidName ?? "";
   const enrolledWorkshop = WORKSHOPS.find((w) => w.slug === enrolledSlug);
   const detailsWorkshop = WORKSHOPS.find((w) => w.slug === detailsSlug);
-  const pendingWorkshops = (pendingClaim ?? [])
-    .map((s) => WORKSHOPS.find((w) => w.slug === s))
-    .filter(Boolean) as Workshop[];
-
-  // The pick we'll actually try first (skip ones already visibly full).
-  const nextPick = picks.find((s) => !stateFor(s).full) ?? picks[0] ?? null;
-  const nextPickWorkshop = WORKSHOPS.find((w) => w.slug === nextPick);
+  const pendingWorkshop = WORKSHOPS.find((w) => w.slug === pendingSlug);
+  const pickWorkshop = WORKSHOPS.find((w) => w.slug === pick);
 
   const scrollTo = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -234,11 +202,11 @@ export default function Index() {
   // ---- Supabase not configured -------------------------------------------
   if (!ready && !loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center px-6 text-center">
+      <main className="min-h-screen bg-primary text-primary-foreground flex items-center justify-center px-6 text-center">
         <div className="max-w-md">
           <span className="micro-label">Ateliere de Arte Alăturate</span>
           <h1 className="mt-3 text-3xl font-bold">Configurare necesară</h1>
-          <p className="mt-4 text-muted-foreground">
+          <p className="mt-4 opacity-90">
             Lipsesc variabilele Supabase. Creează un fișier <code>.env</code> cu{" "}
             <code>VITE_SUPABASE_URL</code> și <code>VITE_SUPABASE_ANON_KEY</code>.
           </p>
@@ -257,7 +225,7 @@ export default function Index() {
           <h1 className="mt-3 text-4xl md:text-5xl font-bold tracking-tight">
             {kidName ? `${kidName}, ` : ""}ești înscris/ă!
           </h1>
-          <span className="red-line mx-auto mt-6 w-24" style={{ background: "white" }} />
+          <span className="block h-0.5 w-24 bg-white mx-auto mt-6" />
           <p className="mt-8 text-lg opacity-95">
             Atelierul tău: <strong>{enrolledWorkshop.workshopTitle}</strong>
             <br />
@@ -266,11 +234,7 @@ export default function Index() {
           <p className="mt-4 text-sm opacity-80">
             Te poți înscrie la un singur atelier — locul tău e rezervat. Ne vedem acolo!
           </p>
-          <Button
-            variant="secondary"
-            className="mt-8"
-            onClick={() => setJustEnrolled(null)}
-          >
+          <Button variant="secondary" className="mt-8" onClick={() => setJustEnrolled(null)}>
             Înapoi la pagină
           </Button>
         </div>
@@ -278,14 +242,14 @@ export default function Index() {
     );
   }
 
-  // ---- Sticky bar content -------------------------------------------------
+  // ---- Sticky bar ---------------------------------------------------------
   const renderStickyBar = () => {
-    let content;
+    let content: JSX.Element;
     if (!kidId) {
       content = (
         <div className="flex items-center justify-between gap-3 w-full">
           <span className="text-sm font-medium">Pasul 1: spune-ne cine ești</span>
-          <Button size="sm" variant="secondary" onClick={() => scrollTo("identitate")}>
+          <Button size="sm" onClick={() => scrollTo("identitate")}>
             Alege grupa & numele
           </Button>
         </div>
@@ -302,10 +266,10 @@ export default function Index() {
         <div className="flex items-center justify-between gap-3 w-full">
           <span className="text-sm">
             <strong>{kidName}</strong>, ești gata.{" "}
-            {nextPickWorkshop ? (
-              <>Prima alegere: <strong>{nextPickWorkshop.workshopTitle}</strong></>
+            {pickWorkshop ? (
+              <>Atelierul tău: <strong>{pickWorkshop.workshopTitle}</strong></>
             ) : (
-              <span className="opacity-80">Alege-ți atelierele preferate ↑</span>
+              <span className="opacity-80">Alege-ți atelierul ↑</span>
             )}
           </span>
           <span className="inline-flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
@@ -314,51 +278,53 @@ export default function Index() {
           </span>
         </div>
       );
-    } else if (nextPickWorkshop) {
+    } else if (pickWorkshop && !stateFor(pickWorkshop.slug).full) {
       content = (
         <Button
           size="lg"
           className="w-full h-14 text-base font-bold"
           disabled={claiming}
-          onClick={() => setPendingClaim(picks)}
+          onClick={() => setPendingSlug(pickWorkshop.slug)}
         >
           {claiming ? (
             <span className="inline-flex items-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin" /> Se înscrie…
             </span>
           ) : (
-            `ÎNSCRIE-MĂ LA ${nextPickWorkshop.workshopTitle.toUpperCase()}`
+            `ÎNSCRIE-MĂ LA ${pickWorkshop.workshopTitle.toUpperCase()}`
           )}
         </Button>
       );
     } else {
       content = (
         <div className="flex items-center justify-between gap-3 w-full">
-          <span className="text-sm font-medium">Înscrierile sunt deschise — alege un atelier!</span>
-          <Button size="sm" variant="secondary" onClick={() => scrollTo("ateliere")}>
+          <span className="text-sm font-medium">
+            {pickWorkshop ? "Atelierul tău s-a umplut — alege altul!" : "Înscrierile sunt deschise — alege un atelier!"}
+          </span>
+          <Button size="sm" onClick={() => scrollTo("ateliere")}>
             Vezi atelierele
           </Button>
         </div>
       );
     }
     return (
-      <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-secondary text-secondary-foreground">
+      <div className="fixed bottom-0 inset-x-0 z-40 border-t border-white/15 bg-secondary text-secondary-foreground">
         <div className="max-w-6xl mx-auto px-4 md:px-10 py-3 flex items-center">{content}</div>
       </div>
     );
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground pb-28">
+    <main className="min-h-screen bg-primary text-primary-foreground pb-28">
       {/* Header */}
-      <header className="border-b">
+      <header className="border-b border-white/20">
         <div className="max-w-6xl mx-auto px-6 md:px-10 py-6 flex items-center justify-between gap-4">
-          <div className="inline-block bg-white">
-            <img src={etichetaLogo} alt="Festivalul ideo ideis" className="h-14 w-auto md:h-16" />
+          <div className="inline-block bg-white p-2">
+            <img src={etichetaLogo} alt="Festivalul ideo ideis" className="h-12 w-auto md:h-14" />
           </div>
           {ready && (
             <span className="hidden sm:inline-flex items-center gap-2 micro-label">
-              <Radio className="h-3.5 w-3.5 text-primary animate-pulse" />
+              <Radio className="h-3.5 w-3.5 animate-pulse" />
               Locuri actualizate în timp real
             </span>
           )}
@@ -371,41 +337,38 @@ export default function Index() {
         <h1 className="mt-3 text-4xl md:text-6xl font-bold tracking-tight">
           Ateliere de Arte Alăturate
         </h1>
-        <span className="red-line mt-6 w-24" />
-        <p className="mt-6 max-w-2xl text-base md:text-lg leading-relaxed text-muted-foreground">
-          Descoperă atelierele și trainerii din acest an. Marchează-ți acum atelierele
-          preferate (până la 3) — când se deschid înscrierile, te înscriem dintr-o atingere
-          la prima cu locuri libere. Fiecare participant se poate înscrie la un singur atelier.
+        <span className="block h-0.5 w-24 bg-white mt-6" />
+        <p className="mt-6 max-w-2xl text-base md:text-lg leading-relaxed opacity-95">
+          Descoperă atelierele și trainerii. Alege-ți acum atelierul preferat — când se
+          deschid înscrierile, te înscrii dintr-o singură atingere. Locurile sunt limitate
+          și fiecare participant se poate înscrie la un singur atelier.
         </p>
 
         {/* Status + countdown banner */}
         <div
           className={cn(
             "mt-8 border p-4 md:p-5 flex items-start gap-3",
-            isOpen ? "border-primary bg-primary/5" : "border-border bg-muted"
+            isOpen ? "border-white bg-white text-primary" : "border-white/30 bg-white/10"
           )}
         >
           <span
-            className={cn(
-              "mt-1 h-2.5 w-2.5 shrink-0",
-              isOpen ? "bg-primary animate-pulse" : "bg-muted-foreground"
-            )}
+            className={cn("mt-1.5 h-2.5 w-2.5 shrink-0", isOpen ? "bg-primary animate-pulse" : "bg-white")}
             style={{ borderRadius: "9999px" }}
           />
           <div className="flex-1">
             {isOpen ? (
-              <p className="font-semibold">Înscrierile sunt DESCHISE — înscrie-te acum!</p>
+              <p className="font-bold text-lg">Înscrierile sunt DESCHISE — înscrie-te acum!</p>
             ) : (
               <>
                 <p className="font-semibold">Înscrierile nu sunt încă deschise.</p>
                 {opensAtText && (
-                  <p className="text-sm text-muted-foreground mt-0.5">
+                  <p className="text-sm opacity-90 mt-0.5">
                     Se deschid: <strong>{opensAtText}</strong>. Pagina se activează automat.
                   </p>
                 )}
                 {msToOpen != null && (
-                  <p className="mt-2 inline-flex items-center gap-2 text-2xl md:text-3xl font-bold tabular-nums">
-                    <Clock className="h-6 w-6 text-primary" />
+                  <p className="mt-2 inline-flex items-center gap-2 text-3xl md:text-4xl font-bold tabular-nums">
+                    <Clock className="h-7 w-7" />
                     {fmtCountdown(msToOpen)}
                   </p>
                 )}
@@ -417,7 +380,7 @@ export default function Index() {
 
       {/* Identity panel */}
       <section id="identitate" className="max-w-6xl mx-auto px-6 md:px-10 mt-10 scroll-mt-4">
-        <div className="border bg-secondary text-secondary-foreground p-5 md:p-6">
+        <div className="border border-white/15 bg-secondary text-secondary-foreground p-5 md:p-6">
           <h2 className="text-lg font-semibold">Pasul 1 · Cine ești?</h2>
           <p className="text-sm opacity-80 mt-1">
             Alege grupa și numele tău — fă asta din timp ca să fii gata la deschidere.
@@ -461,7 +424,7 @@ export default function Index() {
 
           {kidId && enrolledWorkshop && (
             <div className="mt-4 flex items-center gap-2 text-sm font-medium">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
+              <CheckCircle2 className="h-4 w-4" />
               {kidName ? `${kidName}, ești` : "Ești"} înscris/ă la:{" "}
               <strong>{enrolledWorkshop.workshopTitle}</strong>
             </div>
@@ -473,7 +436,7 @@ export default function Index() {
           )}
           {kidId && !enrolledWorkshop && !checking && (
             <p className="mt-4 text-sm opacity-90">
-              ✓ Gata, <strong>{kidName}</strong>! Pasul 2: marchează-ți atelierele preferate mai jos.
+              ✓ Gata, <strong>{kidName}</strong>! Pasul 2: alege-ți atelierul mai jos.
             </p>
           )}
         </div>
@@ -481,16 +444,14 @@ export default function Index() {
 
       {/* Workshops */}
       <section id="ateliere" className="max-w-6xl mx-auto px-6 md:px-10 mt-12 scroll-mt-4">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-          Pasul 2 · Atelierele
-        </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Apasă <Star className="inline h-3.5 w-3.5" /> ca să-ți marchezi preferatele (max {MAX_PICKS}, în ordine).
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Pasul 2 · Alege-ți atelierul</h2>
+        <p className="mt-2 text-sm opacity-90">
+          Apasă pe atelierul dorit ca să-l alegi. Când se deschid înscrierile, te înscrii cu un singur tap.
         </p>
-        <span className="red-line mt-4 w-16" />
+        <span className="block h-0.5 w-16 bg-white mt-4" />
 
         {loading ? (
-          <div className="mt-10 flex items-center gap-2 text-muted-foreground">
+          <div className="mt-10 flex items-center gap-2 opacity-90">
             <Loader2 className="h-5 w-5 animate-spin" /> Se încarcă atelierele…
           </div>
         ) : (
@@ -499,15 +460,14 @@ export default function Index() {
               const s = stateFor(w.slug);
               const hasDetails = !!w.bio;
               const isMine = enrolledSlug === w.slug;
-              const pickRank = picks.indexOf(w.slug);
-              const isPicked = pickRank >= 0;
+              const isPick = pick === w.slug;
               const lockedOut = !!enrolledSlug && !isMine;
               return (
                 <article
                   key={w.slug}
                   className={cn(
-                    "border flex flex-col bg-card relative",
-                    isMine && "ring-2 ring-primary",
+                    "border flex flex-col bg-card text-card-foreground relative",
+                    (isMine || isPick) && "ring-4 ring-white",
                     s.full && !isMine && "opacity-60"
                   )}
                 >
@@ -520,9 +480,9 @@ export default function Index() {
                         e.currentTarget.src = `${import.meta.env.BASE_URL}placeholder.svg`;
                       }}
                     />
-                    {isPicked && !isMine && (
-                      <span className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-1">
-                        Alegerea ta #{pickRank + 1}
+                    {isPick && !isMine && (
+                      <span className="absolute top-2 left-2 bg-secondary text-secondary-foreground text-xs font-bold px-2 py-1">
+                        ✓ Atelierul tău
                       </span>
                     )}
                     {s.full && !isMine && (
@@ -541,7 +501,7 @@ export default function Index() {
                       </span>
                     </div>
                     <h3 className="mt-2 text-xl font-bold leading-tight">{w.workshopTitle}</h3>
-                    <p className="mt-2 text-sm leading-relaxed line-clamp-3 whitespace-pre-line">
+                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-3 whitespace-pre-line">
                       {w.workshopDescription}
                     </p>
                     {hasDetails && (
@@ -556,42 +516,37 @@ export default function Index() {
 
                     <div className="mt-5 pt-1">{renderSpots(w.slug)}</div>
 
-                    <div className="mt-4 flex flex-col gap-2">
+                    <div className="mt-4">
                       {isMine ? (
                         <div className="flex items-center justify-center gap-2 py-2 text-sm font-semibold text-primary border border-primary">
                           <CheckCircle2 className="h-4 w-4" /> Ești înscris/ă aici
                         </div>
+                      ) : lockedOut ? (
+                        <div className="py-2 text-center text-sm text-muted-foreground">
+                          Te-ai înscris la alt atelier
+                        </div>
+                      ) : isOpen ? (
+                        <Button
+                          className="w-full"
+                          disabled={s.full || claiming}
+                          onClick={() => setPendingSlug(w.slug)}
+                        >
+                          {s.full ? "Locuri epuizate" : "Înscrie-mă"}
+                        </Button>
                       ) : (
-                        <>
-                          {!enrolledSlug && (
-                            <Button
-                              variant={isPicked ? "default" : "outline"}
-                              className="w-full"
-                              onClick={() => togglePick(w.slug)}
-                            >
-                              {isPicked ? (
-                                <span className="inline-flex items-center gap-2">
-                                  <Star className="h-4 w-4 fill-current" /> Alegerea ta #{pickRank + 1}
-                                  <X className="h-3.5 w-3.5 opacity-80" />
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-2">
-                                  <Star className="h-4 w-4" /> Vreau la acest atelier
-                                </span>
-                              )}
-                            </Button>
+                        <Button
+                          variant={isPick ? "default" : "outline"}
+                          className="w-full"
+                          onClick={() => choose(w.slug)}
+                        >
+                          {isPick ? (
+                            <span className="inline-flex items-center gap-2">
+                              <CheckCircle2 className="h-4 w-4" /> Atelierul tău
+                            </span>
+                          ) : (
+                            "Aleg acest atelier"
                           )}
-                          {isOpen && !lockedOut && (
-                            <Button
-                              variant="secondary"
-                              className="w-full"
-                              disabled={s.full || claiming}
-                              onClick={() => setPendingClaim([w.slug])}
-                            >
-                              {s.full ? "Locuri epuizate" : "Înscrie-mă direct"}
-                            </Button>
-                          )}
-                        </>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -643,31 +598,14 @@ export default function Index() {
       </Dialog>
 
       {/* Confirm dialog */}
-      <AlertDialog open={!!pendingClaim} onOpenChange={(o) => !o && setPendingClaim(null)}>
+      <AlertDialog open={!!pendingSlug} onOpenChange={(o) => !o && setPendingSlug(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmi înscrierea?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div>
-                {pendingWorkshops.length > 1 ? (
-                  <>
-                    Te înscriem la prima opțiune cu locuri libere, în ordine:
-                    <ol className="mt-2 list-decimal list-inside font-medium text-foreground">
-                      {pendingWorkshops.map((w) => (
-                        <li key={w.slug}>{w.workshopTitle}</li>
-                      ))}
-                    </ol>
-                  </>
-                ) : (
-                  <>
-                    Te vei înscrie la{" "}
-                    <strong className="text-foreground">{pendingWorkshops[0]?.workshopTitle}</strong>.
-                  </>
-                )}
-                <p className="mt-3">
-                  Atenție: te poți înscrie la un singur atelier și nu mai poți schimba după confirmare.
-                </p>
-              </div>
+            <AlertDialogDescription>
+              {kidName ? <strong>{kidName}</strong> : "Te înscrii"}, te vei înscrie la{" "}
+              <strong className="text-foreground">{pendingWorkshop?.workshopTitle}</strong>. Te poți
+              înscrie la un singur atelier și nu mai poți schimba după confirmare.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -675,7 +613,7 @@ export default function Index() {
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                if (pendingClaim) claimWithFallback(pendingClaim);
+                if (pendingSlug) claim(pendingSlug);
               }}
               disabled={claiming}
             >
@@ -695,7 +633,6 @@ export default function Index() {
     </main>
   );
 
-  // Local helper that needs component scope.
   function renderSpots(slug: string) {
     const s = stateFor(slug);
     return (
