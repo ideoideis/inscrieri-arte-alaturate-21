@@ -250,10 +250,10 @@ export default function Index() {
     } else if (!isOpen) {
       content = (
         <div className="flex items-center justify-between gap-3 w-full">
-          <span className="text-sm">
+          <span className="text-sm min-w-0 truncate">
             <strong>{kidName}</strong>, ești gata. Înscrierile se deschid în curând.
           </span>
-          <span className="inline-flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap shrink-0">
             <Clock className="h-4 w-4" />
             {msToOpen != null ? fmtCountdown(msToOpen) : "în curând"}
           </span>
@@ -419,7 +419,7 @@ export default function Index() {
             <Loader2 className="h-5 w-5 animate-spin" /> Se încarcă atelierele…
           </div>
         ) : (
-          <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
             {WORKSHOPS.map((w) => {
               const s = stateFor(w.slug);
               const hasDetails = !!w.bio;
@@ -429,13 +429,13 @@ export default function Index() {
                 <article
                   key={w.slug}
                   className={cn(
-                    "flex flex-col bg-card text-card-foreground border border-black/5",
-                    isMine && "ring-4 ring-white",
+                    "flex flex-row md:flex-col bg-card text-card-foreground border border-black/5 overflow-hidden",
+                    isMine && "ring-2 md:ring-4 ring-white",
                     s.full && !isMine && "opacity-70"
                   )}
                 >
-                  {/* Editorial photo with overlaid name + discipline */}
-                  <div className="relative aspect-[4/5] bg-secondary overflow-hidden">
+                  {/* Photo: compact thumbnail on mobile, full editorial on desktop */}
+                  <div className="relative shrink-0 w-28 sm:w-40 self-stretch md:w-full md:self-auto md:aspect-[4/5] bg-secondary overflow-hidden">
                     {w.photo ? (
                       <img
                         src={photoSrc(w)}
@@ -447,25 +447,26 @@ export default function Index() {
                         }}
                       />
                     ) : (
-                      <div className="h-full w-full flex items-center justify-center">
-                        <span className="text-xs uppercase tracking-widest text-white/40">
+                      <div className="h-full w-full min-h-[8rem] flex items-center justify-center">
+                        <span className="text-[0.6rem] md:text-xs uppercase tracking-widest text-white/40 text-center px-1">
                           foto în curând
                         </span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/15 to-transparent" />
-                    <span className="absolute top-3 left-3 bg-primary text-primary-foreground text-[0.6rem] uppercase tracking-wider font-semibold px-2 py-1">
+                    {/* desktop-only name overlay */}
+                    <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-secondary via-secondary/15 to-transparent" />
+                    <span className="hidden md:inline-block absolute top-3 left-3 bg-primary text-primary-foreground text-[0.6rem] uppercase tracking-wider font-semibold px-2 py-1">
                       {w.discipline}
                     </span>
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <div className="hidden md:block absolute bottom-0 left-0 right-0 p-4">
                       <span className="block text-[0.6rem] uppercase tracking-widest text-white/70">
                         Trainer
                       </span>
                       <p className="text-white text-lg font-bold leading-tight">{w.trainer}</p>
                     </div>
                     {s.full && !isMine && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-secondary/55">
-                        <span className="border-2 border-white text-white font-bold tracking-widest px-4 py-2 -rotate-6">
+                      <div className="absolute inset-0 flex items-center justify-center bg-secondary/55 p-1">
+                        <span className="border border-white md:border-2 text-white font-bold tracking-widest text-[0.6rem] md:text-base leading-tight text-center px-1.5 py-1 md:px-4 md:py-2 -rotate-6">
                           LOCURI EPUIZATE
                         </span>
                       </div>
@@ -473,22 +474,29 @@ export default function Index() {
                   </div>
 
                   {/* Content */}
-                  <div className="p-5 flex flex-col flex-1">
-                    <h3 className="text-xl font-bold leading-tight">{w.workshopTitle}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-3 whitespace-pre-line">
+                  <div className="p-4 md:p-5 flex flex-col flex-1 min-w-0">
+                    {/* mobile-only trainer + discipline (overlaid on photo for desktop) */}
+                    <div className="md:hidden flex items-center gap-2 flex-wrap mb-1">
+                      <span className="bg-primary text-primary-foreground text-[0.55rem] uppercase tracking-wider font-semibold px-1.5 py-0.5">
+                        {w.discipline}
+                      </span>
+                      <span className="text-xs text-muted-foreground truncate">{w.trainer}</span>
+                    </div>
+                    <h3 className="text-base md:text-xl font-bold leading-tight">{w.workshopTitle}</h3>
+                    <p className="hidden md:block mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-3 whitespace-pre-line">
                       {w.workshopDescription}
                     </p>
                     {hasDetails && (
                       <button
                         type="button"
                         onClick={() => setDetailsSlug(w.slug)}
-                        className="mt-2 self-start text-sm font-semibold text-primary underline underline-offset-2"
+                        className="mt-1.5 md:mt-2 self-start text-sm font-semibold text-primary underline underline-offset-2"
                       >
                         Vezi detalii
                       </button>
                     )}
 
-                    <div className="mt-auto pt-5">
+                    <div className="mt-auto pt-3 md:pt-5">
                       {renderSpots(w.slug)}
                       <div className="mt-4">
                         {isMine ? (
