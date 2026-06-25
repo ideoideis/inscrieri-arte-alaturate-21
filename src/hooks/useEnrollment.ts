@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 // --- Types -------------------------------------------------------------------
@@ -21,7 +21,13 @@ export type EnrollStatus =
   | "notfound"
   | "error";
 
-type Config = { enrollmentOpen: boolean; opensAt: string | null };
+type Config = {
+  enrollmentOpen: boolean; // manual force-open override
+  forceClosed: boolean; // emergency stop
+  opensAt: string | null; // scheduled auto-open (ISO)
+};
+
+const POLL_MS = 5000; // fallback refresh if realtime hiccups under load
 
 // --- Hook --------------------------------------------------------------------
 export function useEnrollment() {
@@ -29,14 +35,50 @@ export function useEnrollment() {
   const [groups, setGroups] = useState<GroupRow[]>([]);
   const [config, setConfig] = useState<Config>({
     enrollmentOpen: false,
+    forceClosed: false,
     opensAt: null,
   });
   const [loading, setLoading] = useState(true);
-  const [ready, setReady] = useState(false); // false when Supabase isn't configured
+  const [ready, setReady] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
-  // Avoid stale closures inside the realtime callback.
-  const workshopsRef = useRef<WorkshopRow[]>([]);
-  workshopsRef.current = workshops;
+  // Ticking clock so the page auto-unlocks at opens_at without a reload.
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Effective open state (mirrors the server-side check in aa_enroll()).
+  const opensAtMs = config.opensAt ? new Date(config.opensAt).getTime() : null;
+  const scheduledReached = opensAtMs != null && now >= opensAtMs;
+  const isOpen = !config.forceClosed && (config.enrollmentOpen || scheduledReached);
+  const msToOpen =
+    opensAtMs != null && !isOpen ? Math.max(0, opensAtMs - now) : null;
+
+  const applyConfig = useCallback(
+    (row: { enrollment_open: boolean; force_closed?: boolean; opens_at: string | null }) => {
+      setConfig({
+        enrollmentOpen: !!row.enrollment_open,
+        forceClosed: !!row.force_closed,
+        opensAt: row.opens_at ?? null,
+      });
+    },
+    []
+  );
+
+  const refetch = useCallback(async () => {
+    if (!supabase) return;
+    const [wRes, cRes] = await Promise.all([
+      supabase.from("aa_workshops").select("id,slug,titlu,capacity,taken").order("sort"),
+      supabase
+        .from("aa_config")
+        .select("enrollment_open,force_closed,opens_at")
+        .eq("id", 1)
+        .single(),
+    ]);
+    if (wRes.data) setWorkshops(wRes.data as WorkshopRow[]);
+    if (cRes.data) applyConfig(cRes.data);
+  }, [applyConfig]);
 
   // Initial load -------------------------------------------------------------
   useEffect(() => {
@@ -51,30 +93,28 @@ export function useEnrollment() {
     (async () => {
       const [wRes, cRes, gRes] = await Promise.all([
         supabase.from("aa_workshops").select("id,slug,titlu,capacity,taken").order("sort"),
-        supabase.from("aa_config").select("enrollment_open,opens_at").eq("id", 1).single(),
+        supabase
+          .from("aa_config")
+          .select("enrollment_open,force_closed,opens_at")
+          .eq("id", 1)
+          .single(),
         supabase.from("aa_groups").select("id,nume").order("sort"),
       ]);
       if (cancelled) return;
       if (wRes.data) setWorkshops(wRes.data as WorkshopRow[]);
       if (gRes.data) setGroups(gRes.data as GroupRow[]);
-      if (cRes.data) {
-        setConfig({
-          enrollmentOpen: !!cRes.data.enrollment_open,
-          opensAt: cRes.data.opens_at ?? null,
-        });
-      }
+      if (cRes.data) applyConfig(cRes.data);
       setLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [applyConfig]);
 
   // Realtime: live spot counts + open/closed flag ----------------------------
   useEffect(() => {
     if (!supabase) return;
-
     const channel = supabase
       .channel("aa-live")
       .on(
@@ -82,28 +122,26 @@ export function useEnrollment() {
         { event: "UPDATE", schema: "public", table: "aa_workshops" },
         (payload) => {
           const row = payload.new as WorkshopRow;
-          setWorkshops((curr) =>
-            curr.map((w) => (w.id === row.id ? { ...w, ...row } : w))
-          );
+          setWorkshops((curr) => curr.map((w) => (w.id === row.id ? { ...w, ...row } : w)));
         }
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "aa_config" },
-        (payload) => {
-          const row = payload.new as { enrollment_open: boolean; opens_at: string | null };
-          setConfig({
-            enrollmentOpen: !!row.enrollment_open,
-            opensAt: row.opens_at ?? null,
-          });
-        }
+        (payload) => applyConfig(payload.new as never)
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [applyConfig]);
+
+  // Polling fallback: even if realtime drops under load, counts stay fresh.
+  useEffect(() => {
+    if (!supabase) return;
+    const t = setInterval(refetch, POLL_MS);
+    return () => clearInterval(t);
+  }, [refetch]);
 
   // Load the roster for a given group (lazy, on selection) -------------------
   const loadKids = useCallback(async (groupId: string): Promise<KidRow[]> => {
@@ -135,7 +173,6 @@ export function useEnrollment() {
         console.error("[aa_enroll] failed", error);
         return "error";
       }
-      // Optimistically reflect the new count; realtime will reconcile too.
       if (data === "ok") {
         setWorkshops((curr) =>
           curr.map((w) => (w.id === workshopId ? { ...w, taken: w.taken + 1 } : w))
@@ -146,5 +183,16 @@ export function useEnrollment() {
     []
   );
 
-  return { workshops, groups, config, loading, ready, loadKids, kidEnrollment, enroll };
+  return {
+    workshops,
+    groups,
+    config,
+    isOpen,
+    msToOpen,
+    loading,
+    ready,
+    loadKids,
+    kidEnrollment,
+    enroll,
+  };
 }

@@ -52,14 +52,21 @@ create table if not exists public.aa_enrollments (
 create index if not exists aa_enrollments_workshop_idx on public.aa_enrollments(workshop_id);
 
 -- --- Single-row config: when is the form open? ------------------------------
+-- enrollment_open = manual FORCE-OPEN override (open right now, ignore schedule).
+-- opens_at        = scheduled auto-open; once now() >= opens_at it opens itself.
+-- force_closed    = emergency stop; wins over everything.
+-- Effective open  = (NOT force_closed) AND (enrollment_open OR now() >= opens_at)
 create table if not exists public.aa_config (
   id              int primary key default 1 check (id = 1),
   enrollment_open boolean not null default false,
-  opens_at        timestamptz,             -- shown to users as "deschidem la ..."
+  force_closed    boolean not null default false,
+  opens_at        timestamptz,             -- scheduled auto-open (and shown to users)
   updated_at      timestamptz not null default now()
 );
 insert into public.aa_config (id, enrollment_open) values (1, false)
   on conflict (id) do nothing;
+-- additive for projects seeded before force_closed existed
+alter table public.aa_config add column if not exists force_closed boolean not null default false;
 
 -- =============================================================================
 -- aa_enroll() — the atomic enrollment transaction.
@@ -77,8 +84,13 @@ declare
   v_cap   int;
   v_taken int;
 begin
-  -- 1. Is enrollment open right now?
-  select enrollment_open into v_open from aa_config where id = 1;
+  -- 1. Is enrollment open right now? (manual override OR scheduled time reached,
+  --    unless force-closed). Enforced here so the schedule can't be bypassed by
+  --    a client that flips its own clock.
+  select ((not force_closed)
+          and (enrollment_open or (opens_at is not null and now() >= opens_at)))
+    into v_open
+  from aa_config where id = 1;
   if not coalesce(v_open, false) then
     return 'closed';
   end if;

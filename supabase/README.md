@@ -31,20 +31,31 @@ Open the Supabase SQL Editor for the project and run, in order:
 
 ## Opening / closing enrollment
 
-The form is gated by `aa_config`. To open it at the announced time, run in the
-SQL editor (or flip the boolean in the Table editor):
+`aa_config` controls the gate. Effective open =
+`(NOT force_closed) AND (enrollment_open OR now() >= opens_at)` — enforced both
+on the page and inside `aa_enroll()`, so the schedule can't be bypassed.
+
+**Normal flow — just schedule the time and walk away.** It auto-opens at that
+instant on every browser (with a live countdown), no manual flip needed. Note the
+timezone: Romania is `+03` in summer (EEST).
 
 ```sql
--- announce a time (shown on the page); keep it closed for now
-update aa_config set enrollment_open = false,
-                     opens_at = '2026-06-27 18:00:00+03', updated_at = now()
+update aa_config set opens_at = '2026-07-03 19:00:00+03',
+                     enrollment_open = false, force_closed = false, updated_at = now()
 where id = 1;
+```
 
--- OPEN the form (takes effect live on every open page)
-update aa_config set enrollment_open = true, updated_at = now() where id = 1;
+Manual controls (optional):
 
--- CLOSE again
-update aa_config set enrollment_open = false, updated_at = now() where id = 1;
+```sql
+-- force OPEN right now, ignoring the schedule
+update aa_config set enrollment_open = true, force_closed = false, updated_at = now() where id = 1;
+
+-- emergency STOP (overrides everything)
+update aa_config set force_closed = true, updated_at = now() where id = 1;
+
+-- back to closed / scheduled
+update aa_config set enrollment_open = false, force_closed = false, updated_at = now() where id = 1;
 ```
 
 ## Resetting between dry-runs
