@@ -18,10 +18,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useEnrollment, type KidRow } from "@/hooks/useEnrollment";
-import { WORKSHOPS } from "@/data/workshops";
+import { useEnrollment, type KidRow, type WorkshopRow } from "@/hooks/useEnrollment";
+import { WORKSHOPS, type Workshop } from "@/data/workshops";
 import etichetaLogo from "@/assets/eticheta-ideoideis.png";
 
 const LS_KEY = "aa21_kid";
@@ -42,6 +48,11 @@ const loadSaved = (): Saved | null => {
     return null;
   }
 };
+
+const photoSrc = (w: Workshop) =>
+  w.photo
+    ? `${import.meta.env.BASE_URL}trainers/${w.photo}`
+    : `${import.meta.env.BASE_URL}placeholder.svg`;
 
 // Romanian date/time, e.g. "vineri, 27 iunie, 18:00"
 const fmtOpensAt = (iso: string | null): string | null => {
@@ -73,8 +84,9 @@ export default function Index() {
   const [enrolledSlug, setEnrolledSlug] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
-  // Confirm dialog
+  // Confirm dialog + details dialog
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
+  const [detailsSlug, setDetailsSlug] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Restore a previously identified kid from this device.
@@ -87,7 +99,6 @@ export default function Index() {
     }
   }, []);
 
-  // When a group is picked, load its roster.
   const handleGroupChange = async (value: string) => {
     setGroupId(value);
     setKidId("");
@@ -97,7 +108,6 @@ export default function Index() {
     setKidsLoading(false);
   };
 
-  // When a kid is picked, check whether they already have a spot.
   const handleKidChange = async (value: string) => {
     setKidId(value);
     setChecking(true);
@@ -129,13 +139,13 @@ export default function Index() {
       case "ok":
         setEnrolledSlug(pendingSlug);
         persistEnrolled(pendingSlug);
+        setDetailsSlug(null);
         toast.success("Te-ai înscris cu succes! 🎉");
         break;
       case "full":
         toast.error("Ne pare rău — locurile tocmai s-au ocupat.");
         break;
       case "already":
-        // Someone (maybe another device) already used this kid.
         toast.info("Ești deja înscris/ă la un atelier.");
         kidEnrollment(kidId).then((s) => {
           setEnrolledSlug(s);
@@ -154,6 +164,66 @@ export default function Index() {
   const kidName = kids.find((k) => k.id === kidId)?.nume ?? loadSaved()?.kidName ?? "";
   const enrolledWorkshop = WORKSHOPS.find((w) => w.slug === enrolledSlug);
   const pendingWorkshop = WORKSHOPS.find((w) => w.slug === pendingSlug);
+  const detailsWorkshop = WORKSHOPS.find((w) => w.slug === detailsSlug);
+
+  // Per-workshop derived state (spots + button eligibility)
+  const stateFor = (slug: string) => {
+    const row: WorkshopRow | undefined = workshops.find((x) => x.slug === slug);
+    const capacity = row?.capacity ?? 0;
+    const taken = row?.taken ?? 0;
+    const remaining = Math.max(0, capacity - taken);
+    const full = capacity > 0 && remaining <= 0;
+    const isMine = enrolledSlug === slug;
+    const lockedByOtherChoice = !!enrolledSlug && !isMine;
+    const canEnroll = config.enrollmentOpen && !!kidId && !enrolledSlug && !full;
+    return { capacity, taken, remaining, full, isMine, lockedByOtherChoice, canEnroll };
+  };
+
+  const enrollButton = (slug: string) => {
+    const s = stateFor(slug);
+    if (s.isMine) {
+      return (
+        <div className="flex items-center justify-center gap-2 py-2 text-sm font-semibold text-primary border border-primary">
+          <CheckCircle2 className="h-4 w-4" /> Ești înscris/ă aici
+        </div>
+      );
+    }
+    return (
+      <Button className="w-full" disabled={!s.canEnroll} onClick={() => setPendingSlug(slug)}>
+        {!config.enrollmentOpen
+          ? "Înscrieri închise"
+          : s.full
+          ? "Locuri epuizate"
+          : s.lockedByOtherChoice
+          ? "Ai ales deja alt atelier"
+          : !kidId
+          ? "Alege-ți numele mai sus"
+          : "Mă înscriu"}
+      </Button>
+    );
+  };
+
+  const spotsBar = (slug: string) => {
+    const s = stateFor(slug);
+    return (
+      <div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <Users className="h-4 w-4" /> Locuri
+          </span>
+          <span className={cn("font-semibold", s.full && "text-primary")}>
+            {s.full ? "Epuizate" : `${s.remaining} din ${s.capacity} libere`}
+          </span>
+        </div>
+        <div className="mt-2 h-1.5 w-full bg-muted">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: s.capacity > 0 ? `${(s.taken / s.capacity) * 100}%` : "0%" }}
+          />
+        </div>
+      </div>
+    );
+  };
 
   // --- Supabase not configured (local dev without .env) --------------------
   if (!ready && !loading) {
@@ -205,14 +275,12 @@ export default function Index() {
         <div
           className={cn(
             "mt-8 border p-4 md:p-5 flex items-start gap-3",
-            config.enrollmentOpen
-              ? "border-primary bg-primary/5"
-              : "border-border bg-muted"
+            config.enrollmentOpen ? "border-primary bg-primary/5" : "border-border bg-muted"
           )}
         >
           <span
             className={cn(
-              "mt-1 h-2.5 w-2.5 shrink-0 rounded-full",
+              "mt-1 h-2.5 w-2.5 shrink-0",
               config.enrollmentOpen ? "bg-primary animate-pulse" : "bg-muted-foreground"
             )}
             style={{ borderRadius: "9999px" }}
@@ -257,11 +325,7 @@ export default function Index() {
             </div>
             <div>
               <label className="micro-label block mb-2">Numele tău</label>
-              <Select
-                value={kidId}
-                onValueChange={handleKidChange}
-                disabled={!groupId || kidsLoading}
-              >
+              <Select value={kidId} onValueChange={handleKidChange} disabled={!groupId || kidsLoading}>
                 <SelectTrigger className="bg-background text-foreground">
                   <SelectValue
                     placeholder={
@@ -284,7 +348,6 @@ export default function Index() {
             </div>
           </div>
 
-          {/* Already-enrolled confirmation */}
           {kidId && enrolledWorkshop && (
             <div className="mt-4 flex items-center gap-2 text-sm font-medium">
               <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -312,90 +375,51 @@ export default function Index() {
         ) : (
           <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {WORKSHOPS.map((w) => {
-              const row = workshops.find((x) => x.slug === w.slug);
-              const capacity = row?.capacity ?? 0;
-              const taken = row?.taken ?? 0;
-              const remaining = Math.max(0, capacity - taken);
-              const full = capacity > 0 && remaining <= 0;
+              const hasDetails = !!w.bio;
               const isMine = enrolledSlug === w.slug;
-              const photoSrc = w.photo
-                ? `${import.meta.env.BASE_URL}trainers/${w.photo}`
-                : `${import.meta.env.BASE_URL}placeholder.svg`;
-
-              // Button state
-              const lockedByOtherChoice = !!enrolledSlug && !isMine;
-              const canEnroll =
-                config.enrollmentOpen && !!kidId && !enrolledSlug && !full;
-
               return (
                 <article
                   key={w.slug}
-                  className={cn(
-                    "border flex flex-col bg-card",
-                    isMine && "ring-2 ring-primary"
-                  )}
+                  className={cn("border flex flex-col bg-card", isMine && "ring-2 ring-primary")}
                 >
                   <div className="aspect-[4/3] overflow-hidden bg-muted">
                     <img
-                      src={photoSrc}
+                      src={photoSrc(w)}
                       alt={w.trainer}
                       className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = `${import.meta.env.BASE_URL}placeholder.svg`;
+                      }}
                     />
                   </div>
                   <div className="p-5 flex flex-col flex-1">
-                    <span className="micro-label">{w.trainer}</span>
-                    <h3 className="mt-2 text-xl font-bold leading-tight">
-                      {w.workshopTitle}
-                    </h3>
-                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                      {w.bio}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="micro-label">{w.trainer}</span>
+                      <span className="text-[0.6rem] uppercase tracking-wider font-semibold bg-primary text-primary-foreground px-2 py-0.5">
+                        {w.discipline}
+                      </span>
+                    </div>
+                    <h3 className="mt-2 text-xl font-bold leading-tight">{w.workshopTitle}</h3>
+                    {w.bio && (
+                      <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2 whitespace-pre-line">
+                        {w.bio}
+                      </p>
+                    )}
+                    <p className="mt-3 text-sm leading-relaxed line-clamp-3 whitespace-pre-line">
+                      {w.workshopDescription}
                     </p>
-                    <p className="mt-3 text-sm leading-relaxed">{w.workshopDescription}</p>
+                    {hasDetails && (
+                      <button
+                        type="button"
+                        onClick={() => setDetailsSlug(w.slug)}
+                        className="mt-2 self-start text-sm font-semibold text-primary underline underline-offset-2"
+                      >
+                        Vezi detalii
+                      </button>
+                    )}
 
-                    {/* Live spots */}
-                    <div className="mt-5">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                          <Users className="h-4 w-4" /> Locuri
-                        </span>
-                        <span className={cn("font-semibold", full && "text-primary")}>
-                          {full ? "Epuizate" : `${remaining} din ${capacity} libere`}
-                        </span>
-                      </div>
-                      <div className="mt-2 h-1.5 w-full bg-muted">
-                        <div
-                          className="h-full bg-primary transition-all"
-                          style={{
-                            width: capacity > 0 ? `${(taken / capacity) * 100}%` : "0%",
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Action */}
-                    <div className="mt-5 pt-1">
-                      {isMine ? (
-                        <div className="flex items-center justify-center gap-2 py-2 text-sm font-semibold text-primary border border-primary">
-                          <CheckCircle2 className="h-4 w-4" /> Ești înscris/ă aici
-                        </div>
-                      ) : (
-                        <Button
-                          className="w-full"
-                          disabled={!canEnroll}
-                          onClick={() => setPendingSlug(w.slug)}
-                        >
-                          {!config.enrollmentOpen
-                            ? "Înscrieri închise"
-                            : full
-                            ? "Locuri epuizate"
-                            : lockedByOtherChoice
-                            ? "Ai ales deja alt atelier"
-                            : !kidId
-                            ? "Alege-ți numele mai sus"
-                            : "Mă înscriu"}
-                        </Button>
-                      )}
-                    </div>
+                    <div className="mt-5 pt-1">{spotsBar(w.slug)}</div>
+                    <div className="mt-4">{enrollButton(w.slug)}</div>
                   </div>
                 </article>
               );
@@ -403,6 +427,50 @@ export default function Index() {
           </div>
         )}
       </section>
+
+      {/* Details dialog */}
+      <Dialog open={!!detailsSlug} onOpenChange={(o) => !o && setDetailsSlug(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {detailsWorkshop && (
+            <>
+              <DialogHeader>
+                <span className="micro-label">
+                  {detailsWorkshop.trainer} · {detailsWorkshop.discipline}
+                </span>
+                <DialogTitle className="text-2xl">{detailsWorkshop.workshopTitle}</DialogTitle>
+              </DialogHeader>
+              {detailsWorkshop.photo && (
+                <img
+                  src={photoSrc(detailsWorkshop)}
+                  alt={detailsWorkshop.trainer}
+                  className="w-full aspect-[16/9] object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = `${import.meta.env.BASE_URL}placeholder.svg`;
+                  }}
+                />
+              )}
+              {detailsWorkshop.bio && (
+                <div>
+                  <h4 className="micro-label">Despre trainer</h4>
+                  <p className="mt-2 text-sm leading-relaxed whitespace-pre-line">
+                    {detailsWorkshop.bio}
+                  </p>
+                </div>
+              )}
+              <div>
+                <h4 className="micro-label">Despre atelier</h4>
+                <p className="mt-2 text-sm leading-relaxed whitespace-pre-line">
+                  {detailsWorkshop.workshopDescription}
+                </p>
+              </div>
+              <div className="pt-2 border-t">
+                <div className="mb-3">{spotsBar(detailsWorkshop.slug)}</div>
+                {enrollButton(detailsWorkshop.slug)}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Confirm dialog */}
       <AlertDialog open={!!pendingSlug} onOpenChange={(o) => !o && setPendingSlug(null)}>

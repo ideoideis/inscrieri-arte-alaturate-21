@@ -1,77 +1,104 @@
 // =============================================================================
-// Trainers & workshops — display content (hardcoded, as decided).
+// Trainers & workshops — display content (hardcoded).
 // =============================================================================
 // The `slug` of each entry MUST match a row in the aa_workshops table
 // (see supabase/migrations/002_seed_workshops.sql). Capacity & live spot counts
 // come from the database; everything below is just what users see.
 //
-// Photos: drop the real files into  public/trainers/  and set `photo` to the
-// filename (e.g. "ana-trainer.jpg"). The BASE_URL prefix for GitHub Pages is
-// added automatically in the UI. Until then they fall back to placeholder.svg.
+// Photos: drop the real files into  public/trainers/  with the filename set in
+// `photo`. The BASE_URL prefix for GitHub Pages is added automatically in the
+// UI. Empty `photo` falls back to placeholder.svg.
 // =============================================================================
 
 export type Workshop = {
   slug: string; // must match aa_workshops.slug
   trainer: string; // trainer full name
+  discipline: string; // short tag, e.g. "Dans"
   photo: string; // filename inside public/trainers/  (or "" for placeholder)
-  bio: string; // short trainer bio
+  bio: string; // trainer bio (may be long; shown in a details dialog)
   workshopTitle: string; // workshop name (mirror of aa_workshops.titlu)
   workshopDescription: string; // what the kids will do
 };
 
 export const WORKSHOPS: Workshop[] = [
   {
-    slug: "atelier-actorie",
-    trainer: "Nume Trainer Actorie",
+    slug: "atelier-scriere-dramatica",
+    trainer: "Alex Gorghe",
+    discipline: "Scriere dramatică",
     photo: "",
-    bio: "Bio scurtă a trainerului — experiență, spectacole, ce îi place să exploreze cu adolescenții. (Înlocuiește acest text.)",
-    workshopTitle: "Atelier de Actorie",
-    workshopDescription:
-      "Descriere atelier: jocuri de actorie, prezență scenică, lucru cu emoția și improvizație. Ce vor experimenta participanții pe parcursul atelierului. (Înlocuiește acest text.)",
+    bio: "",
+    workshopTitle: "Atelier de scriere dramatică",
+    workshopDescription: "Detalii despre atelier în curând.",
   },
   {
-    slug: "atelier-scenografie",
-    trainer: "Nume Trainer Scenografie",
-    photo: "",
-    bio: "Bio scurtă a trainerului. (Înlocuiește acest text.)",
-    workshopTitle: "Atelier de Scenografie",
-    workshopDescription:
-      "Descriere atelier: spațiul scenic, obiectul de scenă, lumină și culoare — cum se construiește lumea unui spectacol. (Înlocuiește acest text.)",
+    slug: "atelier-dans-filip",
+    trainer: "Filip Stoica",
+    discipline: "Dans",
+    photo: "filip-stoica.jpg",
+    bio: `Filip Stoica este coregraf și artist, specializat în dans contemporan, contact improvisation și diverse stiluri de street dance. Și-a început cariera prin breakdance, iar după absolvirea secției de coregrafie a UNATC a descoperit dansul contemporan și contact improvisation, care i-au permis să exploreze noi moduri de exprimare.
+
+A colaborat cu Centrul Național al Dansului București (CNDB), Linotip — Centru Independent Coregrafic, Teatrul Național București și Muzeul MINA, precum și cu alte teatre din București și din țară. Stilul său îmbină mișcările dinamice și acrobatice cu fluiditatea și sensibilitatea contactului fizic, în creații adesea interdisciplinare, ce integrează elemente de teatru, circ și arte vizuale.`,
+    workshopTitle: "Dance as Self Discovery",
+    workshopDescription: `Un atelier care combină coordonarea, introducerea în dans, dezvoltarea personală și dinamica de grup.
+
+Obiective: îmbunătățirea coordonării fizice și mentale, familiarizarea cu elementele de bază ale mai multor stiluri de dans, creșterea încrederii în sine și a expresivității, și consolidarea spiritului de echipă.
+
+Structura include încălzire, exerciții de coordonare și ritm, secvențe coregrafice de bază, exerciții de expresivitate și creație în grupuri mici, jocuri de dans pentru dinamica de grup și un moment final de relaxare și feedback — o abordare holistică, ce îmbină elemente fizice și emoționale.`,
   },
   {
-    slug: "atelier-muzica",
-    trainer: "Nume Trainer Muzică",
-    photo: "",
-    bio: "Bio scurtă a trainerului. (Înlocuiește acest text.)",
-    workshopTitle: "Atelier de Muzică & Coloană Sonoră",
-    workshopDescription:
-      "Descriere atelier: ritm, voce, sound design și cum sună emoția unui spectacol. (Înlocuiește acest text.)",
+    slug: "atelier-film",
+    trainer: "Tudor Platon",
+    discipline: "Film",
+    photo: "tudor-platon.jpg",
+    bio: `Tudor Platon este regizor de documentar și director de imagine. Debutul său regizoral, „Casa cu păpuși" (2020), a avut premiera la Festivalul de Film de la Sarajevo și a fost selectat la TIFF, Zagreb Dox, Biografilm și Astra Film Festival. Al doilea lungmetraj, „O familie aproape perfectă", a avut premiera la Ji.hlava IDFF 2024, în competiția Opus Bonum.
+
+Ca director de imagine a lucrat la peste douăzeci de filme de ficțiune și documentar, printre care „Anul Nou care n-a fost" (Premiul pentru cel mai bun film — Veneția 2024, Orizzonti), „Cadoul de Crăciun" (Premiul Academiei Europene de Film pentru scurtmetraj, 2018) și „4:15 P.M. Sfârșitul lumii" (nominalizat la Palme d'Or pentru scurtmetraj — Cannes 2016). Este membru al Academiei Europene de Film.`,
+    workshopTitle: "Atelier de film și imagini în mișcare",
+    workshopDescription: `Atelierul urmărește deprinderea abilității de „citire" a imaginilor ca mijloc de cunoaștere, reflecție și expresie personală.
+
+Vom lucra într-un cadru de învățare pe orizontală, unde participanții și trainerii descoperă împreună sensuri și perspective noi, cu atenția îndreptată mai mult către procesul în sine decât către un rezultat prestabilit.`,
   },
   {
-    slug: "atelier-dans",
-    trainer: "Nume Trainer Dans",
-    photo: "",
-    bio: "Bio scurtă a trainerului. (Înlocuiește acest text.)",
-    workshopTitle: "Atelier de Dans & Mișcare Scenică",
-    workshopDescription:
-      "Descriere atelier: corpul ca instrument, mișcare în spațiu, coregrafie de grup. (Înlocuiește acest text.)",
+    slug: "atelier-improvizatie",
+    trainer: "Delia Riciu",
+    discipline: "Improvizație",
+    photo: "delia-riciu.jpg",
+    bio: `Sunt Delia Riciu și practic improvizația de 16 ani, atât ca performer, cât și ca trainer. Predau aproape zilnic și, de vreo 8 ani încoace, particip la o mulțime de festivaluri europene. În momentul de față am show-uri săptămânale la The Fool, alături de colegii din Loja Comediei.`,
+    workshopTitle: "Improv 101",
+    workshopDescription: `La Ideo Ideis nu vin cu rețete sau reguli bătute în cuie. Vin cu jocuri. Cu exerciții. Cu întrebări. Cu energia aia specială care apare când oameni care nu se cunosc încep să creeze împreună — fără să planifice totul dinainte.
+
+Vom explora cum funcționează improvizația pe scenă, cât de mult te poate ajuta în teatru și, poate cel mai surprinzător, cum te poate ajuta să te cunoști pe tine. O să râdem mult, o să greșim des (intenționat sau nu) și o să aflăm cum improvizația poate deveni cel mai sincer aliat al actorului.
+
+Dacă ți se pare că „nu știi ce să spui" sau „ți-e frică să greșești" — e perfect. Ești deja unde trebuie.`,
   },
   {
-    slug: "atelier-foto-video",
-    trainer: "Nume Trainer Foto-Video",
-    photo: "",
-    bio: "Bio scurtă a trainerului. (Înlocuiește acest text.)",
-    workshopTitle: "Atelier de Foto-Video",
-    workshopDescription:
-      "Descriere atelier: cadru, lumină, montaj — povestea spusă prin imagine. (Înlocuiește acest text.)",
+    slug: "atelier-dans-teo",
+    trainer: "Teo Velescu",
+    discipline: "Dans",
+    photo: "teo-velescu.jpg",
+    bio: `Teodora Velescu este coregrafă și dansatoare stabilită în București. S-a specializat în dans clasic la Liceul de Coregrafie „Floria Capsali" și a obținut licența în coregrafie și masteratul în pedagogia dansului la UNATC, unde este în prezent doctorandă în Teatru și Artele Spectacolului.
+
+Colaborează cu instituții precum Teatrul Național București, Opera Națională București, Opera Comică pentru Copii și Centrul Național al Dansului, dar și cu companii independente (Tangaj Collective, Vanner Collective, Linotip). A performat în festivaluri naționale și internaționale și a curatoriat primele două ediții ale festivalului HazarDance, parte din Romanian Creative Week.`,
+    workshopTitle: "Ție cum îți place să te miști?",
+    workshopDescription: `Când te gândești la mișcare, care este prima imagine care-ți apare în minte? Te vezi pe tine, o formă abstractă, sau poate o salcie într-o zi ploioasă? Nu există răspunsuri greșite — dansul poate cuprinde atât de multe universuri, pentru că se naște din noi, oamenii. Iar noi, deși suntem diferiți, tot prin dans suntem aduși împreună.
+
+Acest atelier este menit să ne aducă împreună — minte, trup, suflet, dar și om cu om — prin exerciții de auto-conștientizare, improvizație și creație colectivă.
+
+Imaginație, inspirație, emoție, creație, vocație, meditație, vibrație — ție cum îți place să te miști?`,
   },
   {
-    slug: "atelier-scriere",
-    trainer: "Nume Trainer Scriere",
-    photo: "",
-    bio: "Bio scurtă a trainerului. (Înlocuiește acest text.)",
-    workshopTitle: "Atelier de Scriere Creativă",
-    workshopDescription:
-      "Descriere atelier: de la idee la text, personaj și dialog — scrisul ca joc. (Înlocuiește acest text.)",
+    slug: "atelier-costume",
+    trainer: "Șteff Chelaru",
+    discipline: "Costume",
+    photo: "steff-chelaru.jpg",
+    bio: `Șteff Chelaru a absolvit Moda la Facultatea de Arte Decorative și Design (UNArte București), licență și master, apoi scenografia la UNATC „I.L. Caragiale" (2022). A colaborat cu Teatrul Național București, Teatrul Odeon, Teatrul Metropolis, Teatrul Mic, unteatru, Opera Națională București, ARCUB, Teatrul „Andrei Mureșanu" Sfântu Gheorghe, Teatrul German de Stat Timișoara și Teatrul Masca.
+
+Pentru ea contează enorm comunicarea și sinceritatea celuilalt om din echipă, mai ales relația cu regizorul — o colaborare repetată până ajung la același limbaj vizual și emoțional. „Sunt, de fapt, colegi de emoții teatrale."`,
+    workshopTitle: "Atelierul de costum / modă",
+    workshopDescription: `Un atelier simplu, creativ și la modă, despre styling și conturarea personalității adolescentine prin vestimentație.
+
+Prima zi e de acomodare și prezentare. Apoi fiecare participant primește câte un element (o pălărie, un guler victorian sau un sacou negru) căruia trebuie să-i dea o personalitate proprie prin accesorizare — mărgele, pene, dantelă, cusături, texturi. Urmează finalizarea produsului gândit și styling pentru fiecare, iar la final o ședință foto într-o locație potrivită.
+
+În pași mari și într-un timp foarte scurt, atelierul parcurge procesul unei creații de modă.`,
   },
 ];
