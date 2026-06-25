@@ -1,0 +1,23 @@
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+import path from "path";
+
+// https://vitejs.dev/config/
+export default defineConfig(({ mode }) => ({
+  // Served from https://ideoideis.github.io/inscrieri-ateliere-arte-alaturate-21/
+  // in production (GitHub Pages project site); root path in local dev.
+  base: mode === "production" ? "/inscrieri-ateliere-arte-alaturate-21/" : "/",
+  server: {
+    host: "::",
+    port: 8080,
+    hmr: {
+      overlay: false,
+    },
+  },
+  plugins: [react()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+}));
