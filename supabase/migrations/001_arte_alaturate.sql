@@ -69,7 +69,7 @@ insert into public.aa_config (id, enrollment_open) values (1, false)
 alter table public.aa_config add column if not exists force_closed boolean not null default false;
 
 -- =============================================================================
--- aa_enroll() — the atomic enrollment transaction.
+-- aa_enroll(): the atomic enrollment transaction.
 -- SECURITY DEFINER so it bypasses RLS and is the ONLY way rows land in
 -- aa_enrollments. Returns a short status string the client switches on.
 -- =============================================================================

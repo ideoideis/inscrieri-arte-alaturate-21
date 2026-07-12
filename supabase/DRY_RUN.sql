@@ -1,5 +1,5 @@
 -- ==============================================================
--- DRY RUN — testul cap-coadă de dinainte de lansare.
+-- DRY RUN: testul cap-coadă de dinainte de lansare.
 -- Rulează ASTA în Supabase SQL editor, apoi urmează pașii din
 -- README (secțiunea "Dry run"). La final rulează RUN_FOR_LAUNCH.sql
 -- ca să cureți testul și să programezi deschiderea reală.
@@ -7,7 +7,7 @@
 -- Ce face:
 --   1. curăță orice înscriere existentă (test vechi);
 --   2. aduce lineup-ul final #21 + capacitățile (identic cu lansarea);
---   3. programează deschiderea peste 5 minute de la rulare —
+--   3. programează deschiderea peste 5 minute de la rulare;
 --      pagina va afișa countdown-ul și se va activa singură.
 -- ==============================================================
 
@@ -25,7 +25,7 @@ where w.slug in ('atelier-actorie','atelier-scenografie','atelier-muzica',
 insert into public.aa_workshops (slug, titlu, capacity, sort) values
   ('atelier-scriere-dramatica', 'Atelier de scriere dramatică',                                       13, 1),
   ('atelier-dans-eduard',       'WHAT IF?',                                                           20, 2),
-  ('atelier-actorie-film',      'Atelier de actorie de film pentru adolescenți — Meisner & Weston',   15, 3),
+  ('atelier-actorie-film',      'Atelier de actorie de film pentru adolescenți: Meisner & Weston',   15, 3),
   ('atelier-costume',           'Blugii de toate zilele sunt salvatorii nevăzuți',                    14, 4),
   ('atelier-dans-teo',          'Ție cum îți place să te miști?',                                      18, 5),
   ('atelier-film',              'Atelier de film',                                                    14, 6)

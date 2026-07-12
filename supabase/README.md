@@ -1,4 +1,4 @@
-# Supabase — Înscrieri Ateliere de Arte Alăturate #21
+# Supabase: Înscrieri Ateliere de Arte Alăturate #21
 
 Uses the **same** Supabase project as `info-trupe-21` / `a-moment-of-trust`.
 Everything is namespaced with the `aa_` prefix so it never touches the trupe
@@ -8,32 +8,32 @@ tables.
 
 Open the Supabase SQL Editor for the project and run, in order:
 
-1. `migrations/001_arte_alaturate.sql` — tables, the atomic `aa_enroll()`
+1. `migrations/001_arte_alaturate.sql`: tables, the atomic `aa_enroll()`
    function, RLS policies, and Realtime publication.
-2. `migrations/002_seed_workshops.sql` — workshop titles + **capacities**
+2. `migrations/002_seed_workshops.sql`: workshop titles + **capacities**
    (keep the `slug`s in sync with `src/data/workshops.ts`).
-3. `migrations/003_seed_roster.sql` — the real roster (coordinators excluded).
-   7 troupes with names (~95 kids) + Trupa din Alexandria (names TBD — add a
+3. `migrations/003_seed_roster.sql`: the real roster (coordinators excluded).
+   7 troupes with names (~95 kids) + Trupa din Alexandria (names TBD: add a
    block when available). Re-runnable; also removes the old example rows.
 
 ## How the guarantees work
 
 - **No overselling under load:** `aa_enroll(kid, workshop)` does
   `SELECT ... FOR UPDATE` on the workshop row, so concurrent enrollers to the
-  same workshop serialize — the capacity check can't be raced. 100 kids at once
+  same workshop serialize: the capacity check can't be raced. 100 kids at once
   is trivial for Postgres.
 - **One enrollment per kid:** `aa_enrollments.kid_id` is `UNIQUE`. Even if two
   requests slip through, the second hits the constraint and returns `already`.
 - **Live counts, no reload:** `aa_workshops` (with its `taken` counter) and
   `aa_config` are in the `supabase_realtime` publication; the app subscribes and
-  updates every open browser instantly. Only aggregate counts are exposed —
+  updates every open browser instantly. Only aggregate counts are exposed -
   `aa_enrollments` has no public read policy, so nobody can see who enrolled.
 
 ## Dry run (testul de dinainte de lansare)
 
 Cu pagina nouă **publicată** (push pe `main` → GitHub Pages):
 
-1. Rulează [`DRY_RUN.sql`](DRY_RUN.sql) în SQL editor — curăță tot, pune
+1. Rulează [`DRY_RUN.sql`](DRY_RUN.sql) în SQL editor: curăță tot, pune
    lineup-ul final și programează deschiderea **peste 5 minute**.
 2. Pe telefon, pe **4G** (nu Wi-Fi), deschide pagina live. Vezi countdown-ul.
 3. Ține pagina deschisă și pe laptop, în paralel.
@@ -41,21 +41,21 @@ Cu pagina nouă **publicată** (push pe `main` → GitHub Pages):
 5. De pe telefon: alege o trupă + un copil + un atelier → „Înscrie-mă” → confirmă.
 6. Verifică: pe laptop contorul atelierului scade **live**; alege același copil
    pe laptop → apare „ești deja înscris/ă”.
-7. La final rulează [`RUN_FOR_LAUNCH.sql`](RUN_FOR_LAUNCH.sql) — șterge testul și
+7. La final rulează [`RUN_FOR_LAUNCH.sql`](RUN_FOR_LAUNCH.sql): șterge testul și
    programează deschiderea reală (miercuri, 15 iulie, 16:00).
 
 ## Opening / closing enrollment
 
 `aa_config` controls the gate. Effective open =
-`(NOT force_closed) AND (enrollment_open OR now() >= opens_at)` — enforced both
+`(NOT force_closed) AND (enrollment_open OR now() >= opens_at)`: enforced both
 on the page and inside `aa_enroll()`, so the schedule can't be bypassed.
 
-**Normal flow — just schedule the time and walk away.** It auto-opens at that
+**Normal flow: just schedule the time and walk away.** It auto-opens at that
 instant on every browser (with a live countdown), no manual flip needed. Note the
 timezone: Romania is `+03` in summer (EEST).
 
 **Pentru lansarea #21 (miercuri, 15 iulie 2026, 16:00) rulează
-[`RUN_FOR_LAUNCH.sql`](RUN_FOR_LAUNCH.sql)** — curăță datele de test, aduce
+[`RUN_FOR_LAUNCH.sql`](RUN_FOR_LAUNCH.sql)**: curăță datele de test, aduce
 lineup-ul final și programează deschiderea, totul într-un singur script.
 
 ```sql

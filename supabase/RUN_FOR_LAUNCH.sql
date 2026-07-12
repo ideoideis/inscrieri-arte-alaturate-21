@@ -1,9 +1,9 @@
 -- ==============================================================
--- LANSAREA ÎNSCRIERILOR #21 — rulează ASTA în Supabase SQL editor.
+-- LANSAREA ÎNSCRIERILOR #21: rulează ASTA în Supabase SQL editor.
 --
 -- !!! Rulează O SINGURĂ DATĂ, ÎNAINTE de deschidere (înainte de
 -- miercuri, 15 iulie 2026, 16:00). NU-l rula după ce s-au deschis
--- înscrierile — pasul 1 șterge TOATE înscrierile existente!
+-- înscrierile: pasul 1 șterge TOATE înscrierile existente!
 --
 -- Face, în ordine:
 --   1. curăță înscrierile de test (stress-testul din iulie);
@@ -27,7 +27,7 @@ where w.slug in ('atelier-actorie','atelier-scenografie','atelier-muzica',
 insert into public.aa_workshops (slug, titlu, capacity, sort) values
   ('atelier-scriere-dramatica', 'Atelier de scriere dramatică',                                       13, 1),
   ('atelier-dans-eduard',       'WHAT IF?',                                                           20, 2),
-  ('atelier-actorie-film',      'Atelier de actorie de film pentru adolescenți — Meisner & Weston',   15, 3),
+  ('atelier-actorie-film',      'Atelier de actorie de film pentru adolescenți: Meisner & Weston',   15, 3),
   ('atelier-costume',           'Blugii de toate zilele sunt salvatorii nevăzuți',                    14, 4),
   ('atelier-dans-teo',          'Ție cum îți place să te miști?',                                      18, 5),
   ('atelier-film',              'Atelier de film',                                                    14, 6)

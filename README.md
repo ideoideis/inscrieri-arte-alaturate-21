@@ -1,28 +1,28 @@
-# Înscrieri Ateliere de Arte Alăturate — Festivalul ideo ideis #21
+# Înscrieri Ateliere de Arte Alăturate · Festivalul ideo ideis #21
 
 Pagină de prezentare a trainerilor și atelierelor de **arte alăturate** și de
 **înscriere** a participanților. Copiii răsfoiesc atelierele (poză trainer,
 nume, bio, descriere atelier) și, când se deschid înscrierile, își rezervă un
-loc — direct din pagină.
+loc, direct din pagină.
 
 Construit cu Vite + React + TypeScript + Tailwind + shadcn/ui, cu Supabase
 pentru date, în aceeași marcă vizuală ca `info-trupe-21`.
 
 ## Provocarea (și cum e rezolvată)
 
-GitHub Pages e **static** — nu poate număra locuri sau garanta unicitatea. Toată
+GitHub Pages e **static**: nu poate număra locuri sau garanta unicitatea. Toată
 logica „grea” stă în Supabase:
 
-- **~100 de copii deodată, fără să se depășească locurile** — funcția
+- **~100 de copii deodată, fără să se depășească locurile**: funcția
   `aa_enroll()` blochează rândul atelierului (`SELECT ... FOR UPDATE`), deci
   înscrierile concurente la același atelier se serializează. Imposibil de „furat”
   un loc inexistent.
-- **Fiecare copil se înscrie o singură dată** — constrângere `UNIQUE` pe
+- **Fiecare copil se înscrie o singură dată**: constrângere `UNIQUE` pe
   `aa_enrollments.kid_id`, garantată de Postgres.
-- **Locuri actualizate în timp real, fără reîncărcare** — Supabase Realtime
+- **Locuri actualizate în timp real, fără reîncărcare**: Supabase Realtime
   trimite modificările de `taken`/`enrollment_open` în fiecare browser deschis.
 
-Identitatea copilului: **roster pre-încărcat** — copilul alege grupa, apoi
+Identitatea copilului: **roster pre-încărcat**: copilul alege grupa, apoi
 numele din listă (fără text liber, deci fără greșeli sau duplicate).
 
 ## Dezvoltare locală
@@ -47,7 +47,7 @@ atelier se setează în baza de date (vezi mai jos).
 Vezi [`supabase/README.md`](supabase/README.md): migrațiile, cum se deschid/închid
 înscrierile (`aa_config`) și cum se resetează între teste.
 
-## Build & Deploy — GitHub Pages
+## Build & Deploy: GitHub Pages
 
 ```bash
 npm run build    # output în dist/

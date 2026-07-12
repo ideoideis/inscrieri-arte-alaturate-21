@@ -7,7 +7,7 @@ Trainer photos, named to match `photo` in src/data/workshops.ts:
   teo-velescu.jpg        (+ -480.jpg / -720.jpg)
   steff-chelaru.jpg      (+ -480.jpg / -720.jpg)
 
-Final #21 lineup — web-optimized (1200px tall JPEG ~78%) from the July 2026
+Final #21 lineup: web-optimized (1200px tall JPEG ~78%) from the July 2026
 Drive folder ("foto traineri arte al, B&W"). The -480/-720 variants feed the
 responsive `srcset` (phones on mobile data download ~1/3 of the bytes).
 

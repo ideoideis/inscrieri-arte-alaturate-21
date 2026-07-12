@@ -1,7 +1,7 @@
 -- ==============================================================
 -- RUN THIS ONCE in the Supabase SQL editor (project waqyaewaldphstmiobjj).
 -- It is the concatenation of migrations 001 + 002 + 003, in order.
--- Safe to re-run. After it succeeds, reload the page — the dropdowns fill.
+-- Safe to re-run. After it succeeds, reload the page: the dropdowns fill.
 -- ==============================================================
 
 -- =============================================================================
@@ -75,7 +75,7 @@ insert into public.aa_config (id, enrollment_open) values (1, false)
 alter table public.aa_config add column if not exists force_closed boolean not null default false;
 
 -- =============================================================================
--- aa_enroll() — the atomic enrollment transaction.
+-- aa_enroll(): the atomic enrollment transaction.
 -- SECURITY DEFINER so it bypasses RLS and is the ONLY way rows land in
 -- aa_enrollments. Returns a short status string the client switches on.
 -- =============================================================================
@@ -234,7 +234,7 @@ where w.slug in ('atelier-actorie','atelier-scenografie','atelier-muzica',
 insert into public.aa_workshops (slug, titlu, capacity, sort) values
   ('atelier-scriere-dramatica', 'Atelier de scriere dramatică',                                       13, 1),
   ('atelier-dans-eduard',       'WHAT IF?',                                                           20, 2),
-  ('atelier-actorie-film',      'Atelier de actorie de film pentru adolescenți — Meisner & Weston',   15, 3),
+  ('atelier-actorie-film',      'Atelier de actorie de film pentru adolescenți: Meisner & Weston',   15, 3),
   ('atelier-costume',           'Blugii de toate zilele sunt salvatorii nevăzuți',                    14, 4),
   ('atelier-dans-teo',          'Ție cum îți place să te miști?',                                      18, 5),
   ('atelier-film',              'Atelier de film',                                                    14, 6)
@@ -244,7 +244,7 @@ on conflict (slug) do update
       sort = excluded.sort;
 
 -- =============================================================================
--- Roster — real participants (coordinators intentionally EXCLUDED).
+-- Roster: real participants (coordinators intentionally EXCLUDED).
 -- =============================================================================
 -- The pre-loaded roster is what guarantees "each kid enrolls only once": the
 -- kid picks their group, then their name from this list, and the enrollment is
@@ -350,5 +350,5 @@ select g.id, k.nume from public.aa_groups g cross join (values
 where g.nume = 'Protha - Panciu'
 on conflict (group_id, nume) do nothing;
 
--- Trupa din Alexandria — no participant names provided yet.
+-- Trupa din Alexandria: no participant names provided yet.
 -- When you have them, add a block like the ones above.

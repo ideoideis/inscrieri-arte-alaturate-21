@@ -145,12 +145,12 @@ type Spots = {
 };
 
 // O secțiune albă per atelier. Ca pagina să nu fie kilometrică, arată doar
-// esențialul (titlu, locuri, primul paragraf, poza, trainerul) — restul
+// esențialul (titlu, locuri, primul paragraf, poza, trainerul); restul
 // (descrierea completă, tema, ce să aduci, bio) stă sub „citește mai mult”.
 function WorkshopBlock({ w, spots }: { w: Workshop; spots: Spots }) {
   const [open, setOpen] = useState(false);
 
-  // Deschide automat blocul când e țintit prin ancoră (#slug) — din lista de
+  // Deschide automat blocul când e țintit prin ancoră (#slug), din lista de
   // ateliere sau din link-ul „tema ta de pregătit” de după înscriere.
   useEffect(() => {
     const onHash = () => {
@@ -338,7 +338,7 @@ export default function Index() {
         saveSaved({ enrolledSlug: slug });
         break;
       case "full":
-        toast.error(`${title} s-a umplut — alege rapid alt atelier.`);
+        toast.error(`${title} s-a umplut. Alege rapid alt atelier.`);
         break;
       case "already": {
         const cur = await kidEnrollment(kidId);
@@ -386,7 +386,7 @@ export default function Index() {
       {/* ============================== HERO (roșu) ============================== */}
       <header className="bg-primary text-primary-foreground">
         <div className="max-w-4xl mx-auto px-6 md:px-10">
-          {/* eticheta — lipită de marginea de sus, ca pe ideoideis.ro */}
+          {/* eticheta, lipită de marginea de sus, ca pe ideoideis.ro */}
           <div className="inline-block bg-white px-2.5 pt-3 pb-2.5">
             <img src={etichetaLogo} alt="Festivalul ideo ideis" className="h-11 w-auto md:h-12" />
           </div>
@@ -413,9 +413,9 @@ export default function Index() {
             </p>
             {isOpen ? (
               <p className="leading-relaxed font-semibold">
-                Înscrierile sunt deschise —{" "}
+                Înscrierile sunt deschise!{" "}
                 <a href="#inscriere" className="underline underline-offset-4">
-                  mergi la formular ↓
+                  Mergi la formular ↓
                 </a>
               </p>
             ) : (
@@ -424,8 +424,9 @@ export default function Index() {
                   Formularul se deschide automat, {opensAtText}
                   {msToOpen != null && (
                     <>
-                      {" — "}
+                      {" ("}
                       <span className="tabular-nums font-semibold">{fmtCountdown(msToOpen)}</span>
+                      {")"}
                     </>
                   )}
                   .
@@ -502,7 +503,7 @@ export default function Index() {
                 </p>
                 <p className="mt-2 leading-relaxed">
                   Atelierul tău: <strong>{enrolledWorkshop.workshopTitle}</strong> cu{" "}
-                  {enrolledWorkshop.trainer}. Locul tău e rezervat — ne vedem la festival!
+                  {enrolledWorkshop.trainer}. Locul tău e rezervat. Ne vedem la festival!
                 </p>
                 {enrolledWorkshop.task && (
                   <p className="mt-2 leading-relaxed">
@@ -630,12 +631,12 @@ export default function Index() {
           </div>
 
           <p className="mt-6 text-center text-sm opacity-75">
-            Locurile se actualizează în timp real — nu e nevoie să reîncarci pagina.
+            Locurile se actualizează în timp real, nu e nevoie să reîncarci pagina.
           </p>
         </div>
       </section>
 
-      {/* Pastilă plutitoare pe mobil — apare doar când înscrierile sunt deschise */}
+      {/* Pastilă plutitoare pe mobil, apare doar când înscrierile sunt deschise */}
       {isOpen && !enrolledWorkshop && !formInView && (
         <a
           href="#inscriere"

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Söhne — brand typeface (files in /public/fonts/) */
+/* Söhne: brand typeface (files in /public/fonts/) */
 @font-face {
   font-family: 'Söhne';
   src: url('./assets/fonts/soehne-buch.woff2') format('woff2');
@@ -20,7 +20,7 @@
 
 @layer base {
   :root {
-    /* Slide layout — fixed spacing, identical on all screen sizes */
+    /* Slide layout: fixed spacing, identical on all screen sizes */
     --slide-pt: 2rem;
     --slide-px: 2.5rem;
     --slide-py: 2rem;
@@ -102,7 +102,7 @@
     border-radius: 0 !important;
   }
 
-  /* Swimathon slide — timeline circles and logo box need rounded corners */
+  /* Swimathon slide: timeline circles and logo box need rounded corners */
   .slide-swimathon .timeline-marker {
     border-radius: 50% !important;
   }
@@ -190,7 +190,7 @@
   }
 }
 
-/* Print / PDF export — one slide per page */
+/* Print / PDF export: one slide per page */
 @page {
   size: 13.333in 7.5in;
   margin: 0;
@@ -207,7 +207,7 @@
   body {
     margin: 0;
     padding: 0;
-    /* Preserve exact colors in PDF — prevents browser from lightening/desaturating */
+    /* Preserve exact colors in PDF: prevents browser from lightening/desaturating */
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }

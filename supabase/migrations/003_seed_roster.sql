@@ -1,5 +1,5 @@
 -- =============================================================================
--- Roster — real participants (coordinators intentionally EXCLUDED).
+-- Roster: real participants (coordinators intentionally EXCLUDED).
 -- =============================================================================
 -- The pre-loaded roster is what guarantees "each kid enrolls only once": the
 -- kid picks their group, then their name from this list, and the enrollment is
@@ -105,5 +105,5 @@ select g.id, k.nume from public.aa_groups g cross join (values
 where g.nume = 'Protha - Panciu'
 on conflict (group_id, nume) do nothing;
 
--- Trupa din Alexandria — no participant names provided yet.
+-- Trupa din Alexandria: no participant names provided yet.
 -- When you have them, add a block like the ones above.
