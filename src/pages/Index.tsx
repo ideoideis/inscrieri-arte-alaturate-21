@@ -129,13 +129,6 @@ function PillLink({ href, children }: { href: string; children: string }) {
   );
 }
 
-// Eticheta categoriei în lista de navigare: „dans · eduard” când disciplina se repetă.
-const categoryLabel = (w: Workshop) => {
-  const dup = WORKSHOPS.filter((x) => x.discipline === w.discipline).length > 1;
-  const base = w.discipline.toLowerCase();
-  return dup ? `${base} · ${w.trainer.split(" ")[0].toLowerCase()}` : base;
-};
-
 type Spots = {
   row: WorkshopRow | undefined;
   capacity: number;
@@ -386,9 +379,9 @@ export default function Index() {
       {/* ============================== HERO (roșu) ============================== */}
       <header className="bg-primary text-primary-foreground">
         <div className="max-w-4xl mx-auto px-6 md:px-10">
-          {/* eticheta, lipită de marginea de sus, ca pe ideoideis.ro */}
-          <div className="inline-block bg-white px-2.5 pt-3 pb-2.5">
-            <img src={etichetaLogo} alt="Festivalul ideo ideis" className="h-11 w-auto md:h-12" />
+          {/* eticheta, lipită de marginea de sus, la fel ca pe info-trupe-21 */}
+          <div className="inline-block bg-white p-3 md:p-4">
+            <img src={etichetaLogo} alt="Festivalul ideo ideis" className="h-20 w-auto md:h-24" />
           </div>
 
           <h1 className="mt-10 md:mt-20 text-4xl md:text-6xl font-bold leading-tight">
@@ -441,14 +434,22 @@ export default function Index() {
           <p className="text-sm text-center opacity-90">
             Mai jos este o listă cu atelierele de anul acesta, ca să poți naviga ușor.
           </p>
-          <ul className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-3">
+          <ul className="mt-6 grid gap-3 md:grid-cols-2 md:gap-4">
             {WORKSHOPS.map((w) => (
               <li key={w.slug}>
                 <a
                   href={`#${w.slug}`}
-                  className="block bg-white text-primary text-sm font-semibold text-center px-3 py-3 hover:bg-white/90 transition-colors"
+                  className="flex items-center justify-between gap-3 bg-white text-primary px-5 py-4 hover:bg-white/90 transition-colors"
                 >
-                  {categoryLabel(w)} ›
+                  <span className="min-w-0">
+                    <span className="block text-base md:text-lg font-bold leading-snug">
+                      {w.discipline.toLowerCase()}
+                    </span>
+                    <span className="mt-0.5 block text-sm text-muted-foreground">{w.trainer}</span>
+                  </span>
+                  <span aria-hidden className="shrink-0 text-2xl font-bold">
+                    ›
+                  </span>
                 </a>
               </li>
             ))}
