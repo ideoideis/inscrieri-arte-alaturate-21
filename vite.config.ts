@@ -4,9 +4,9 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // Served from https://ideoideis.github.io/inscrieri-ateliere-arte-alaturate-21/
+  // Served from https://ideoideis.github.io/inscrieri-arte-alaturate-21/
   // in production (GitHub Pages project site); root path in local dev.
-  base: mode === "production" ? "/inscrieri-ateliere-arte-alaturate-21/" : "/",
+  base: mode === "production" ? "/inscrieri-arte-alaturate-21/" : "/",
   server: {
     host: "::",
     port: 8080,

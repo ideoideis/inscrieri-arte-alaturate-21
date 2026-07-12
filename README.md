@@ -58,4 +58,4 @@ Deploy automat prin GitHub Actions ([.github/workflows/deploy.yml](.github/workf
 la fiecare push pe `main`. În producție `base` este
 `/inscrieri-ateliere-arte-alaturate-21/` (vezi `vite.config.ts`). Site live:
 
-**https://ideoideis.github.io/inscrieri-ateliere-arte-alaturate-21/**
+**https://ideoideis.github.io/inscrieri-arte-alaturate-21/**

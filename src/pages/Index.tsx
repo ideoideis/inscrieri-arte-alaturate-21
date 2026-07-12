@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, Loader2, Radio, Users } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useEnrollment, type KidRow, type WorkshopRow } from "@/hooks/useEnrollment";
@@ -59,6 +59,14 @@ const photoSrc = (w: Workshop) =>
     ? `${import.meta.env.BASE_URL}trainers/${w.photo}`
     : `${import.meta.env.BASE_URL}placeholder.svg`;
 
+// Variante mai mici (-480/-720, generate cu sips) pentru telefoane pe date mobile.
+const photoSrcSet = (w: Workshop) => {
+  if (!w.photo) return undefined;
+  const dir = `${import.meta.env.BASE_URL}trainers/`;
+  const stem = w.photo.replace(/\.jpg$/, "");
+  return `${dir}${stem}-480.jpg 480w, ${dir}${stem}-720.jpg 720w, ${dir}${w.photo} 900w`;
+};
+
 const fmtOpensAt = (iso: string | null): string | null => {
   if (!iso) return null;
   try {
@@ -85,14 +93,14 @@ const fmtCountdown = (ms: number): string => {
   return `${p(h)}:${p(m)}:${p(s)}`;
 };
 
-// Render multi-paragraph copy as clean, separated blocks (not a wall of text).
-function Paragraphs({ text }: { text: string }) {
+// Multi-paragraph copy as clean, separated blocks (not a wall of text).
+function Paragraphs({ text, className }: { text: string; className?: string }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {text
         .split(/\n{2,}/)
         .map((para, i) => (
-          <p key={i} className="text-[15px] leading-relaxed text-foreground/90 whitespace-pre-line">
+          <p key={i} className={cn("leading-relaxed whitespace-pre-line", className)}>
             {para.trim()}
           </p>
         ))}
@@ -100,13 +108,152 @@ function Paragraphs({ text }: { text: string }) {
   );
 }
 
-// Small red section heading with an accent tick.
-function SectionTitle({ children }: { children: string }) {
+// Small red inline label ("tema ta:", "ce să aduci:").
+function Chip({ children }: { children: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="h-0.5 w-5 bg-primary" />
-      <h4 className="text-primary text-xs font-bold uppercase tracking-widest">{children}</h4>
-    </div>
+    <span className="inline-block bg-primary text-primary-foreground text-sm px-1.5 py-0.5 mr-2 align-baseline whitespace-nowrap">
+      {children}
+    </span>
+  );
+}
+
+// White pill link, ca pe pagina #20 ("înapoi la ateliere ›").
+function PillLink({ href, children }: { href: string; children: string }) {
+  return (
+    <a
+      href={href}
+      className="inline-block bg-white text-primary text-sm font-semibold px-6 py-2.5 hover:bg-white/90 transition-colors"
+    >
+      {children}
+    </a>
+  );
+}
+
+// Eticheta categoriei în lista de navigare: „dans · eduard” când disciplina se repetă.
+const categoryLabel = (w: Workshop) => {
+  const dup = WORKSHOPS.filter((x) => x.discipline === w.discipline).length > 1;
+  const base = w.discipline.toLowerCase();
+  return dup ? `${base} · ${w.trainer.split(" ")[0].toLowerCase()}` : base;
+};
+
+type Spots = {
+  row: WorkshopRow | undefined;
+  capacity: number;
+  taken: number;
+  remaining: number;
+  full: boolean;
+};
+
+// O secțiune albă per atelier. Ca pagina să nu fie kilometrică, arată doar
+// esențialul (titlu, locuri, primul paragraf, poza, trainerul) — restul
+// (descrierea completă, tema, ce să aduci, bio) stă sub „citește mai mult”.
+function WorkshopBlock({ w, spots }: { w: Workshop; spots: Spots }) {
+  const [open, setOpen] = useState(false);
+
+  // Deschide automat blocul când e țintit prin ancoră (#slug) — din lista de
+  // ateliere sau din link-ul „tema ta de pregătit” de după înscriere.
+  useEffect(() => {
+    const onHash = () => {
+      if (window.location.hash === `#${w.slug}`) setOpen(true);
+    };
+    onHash();
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [w.slug]);
+
+  const [teaser, ...restParts] = w.workshopDescription.split(/\n{2,}/);
+  const rest = restParts.join("\n\n");
+
+  return (
+    <section id={w.slug} className="bg-background text-foreground scroll-mt-4">
+      <div className="max-w-4xl mx-auto px-6 md:px-10 py-12 md:py-16">
+        <h2 className="text-4xl md:text-6xl font-bold text-primary leading-[1.05]">
+          {w.discipline.toLowerCase()}
+        </h2>
+
+        <div className="mt-8 md:mt-12 grid gap-8 md:gap-12 md:grid-cols-[1fr,17rem] lg:grid-cols-[1fr,19rem]">
+          {/* Stânga: atelierul */}
+          <div>
+            <h3 className="text-xl md:text-2xl text-primary leading-snug">{w.workshopTitle}</h3>
+            {spots.row && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {spots.full ? (
+                  <span className="text-primary font-semibold">Locurile s-au epuizat.</span>
+                ) : (
+                  `${spots.remaining} din ${spots.capacity} locuri libere`
+                )}
+              </p>
+            )}
+
+            <p className="mt-6 leading-relaxed whitespace-pre-line">{teaser.trim()}</p>
+
+            {open && (
+              <>
+                {rest && (
+                  <div className="mt-4">
+                    <Paragraphs text={rest} />
+                  </div>
+                )}
+
+                {w.task && (
+                  <div className="mt-7 border-l-2 border-primary bg-primary/5 p-4 md:p-5">
+                    <p className="mb-4">
+                      <Chip>tema ta:</Chip>
+                      <span className="text-sm text-muted-foreground">
+                        de pregătit de cei care se înscriu la acest atelier
+                      </span>
+                    </p>
+                    <Paragraphs text={w.task} />
+                  </div>
+                )}
+
+                {w.bring && (
+                  <p className="mt-6 leading-relaxed">
+                    <Chip>ce să aduci:</Chip>
+                    {w.bring}
+                  </p>
+                )}
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              className="mt-5 inline-flex items-center text-primary font-semibold"
+            >
+              {open ? "arată mai puțin ↑" : "citește mai mult ↓"}
+            </button>
+          </div>
+
+          {/* Dreapta: trainerul */}
+          <aside>
+            <img
+              src={photoSrc(w)}
+              srcSet={photoSrcSet(w)}
+              sizes="(min-width: 768px) 19rem, calc(100vw - 3rem)"
+              alt={w.trainer}
+              loading="lazy"
+              decoding="async"
+              className="w-full aspect-[3/4] object-cover bg-muted"
+              onError={(e) => {
+                e.currentTarget.srcset = "";
+                e.currentTarget.src = `${import.meta.env.BASE_URL}placeholder.svg`;
+              }}
+            />
+            {w.photoCredit && (
+              <p className="mt-1.5 text-xs text-muted-foreground">foto: {w.photoCredit}</p>
+            )}
+            <p className="mt-6 text-sm text-muted-foreground">trainer:</p>
+            <p className="mt-0.5 text-lg font-semibold text-primary">{w.trainer}</p>
+            {open && (
+              <div className="mt-3">
+                <Paragraphs text={w.bio} className="text-sm text-muted-foreground" />
+              </div>
+            )}
+          </aside>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -122,10 +269,19 @@ export default function Index() {
   const [enrolledSlug, setEnrolledSlug] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
-  const [pendingSlug, setPendingSlug] = useState<string | null>(null);
-  const [detailsSlug, setDetailsSlug] = useState<string | null>(null);
+  const [selectedSlug, setSelectedSlug] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const [claiming, setClaiming] = useState(false);
-  const [justEnrolled, setJustEnrolled] = useState<string | null>(null);
+
+  // Ascunde pastila plutitoare când formularul e deja pe ecran.
+  const [formInView, setFormInView] = useState(false);
+  useEffect(() => {
+    const el = document.getElementById("inscriere");
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => setFormInView(entry.isIntersecting));
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [ready]);
 
   useEffect(() => {
     const s = loadSaved();
@@ -158,7 +314,7 @@ export default function Index() {
     saveSaved({ kidId: value, kidName, groupId, groupName, enrolledSlug: slug });
   };
 
-  const stateFor = (slug: string) => {
+  const stateFor = (slug: string): Spots => {
     const row: WorkshopRow | undefined = workshops.find((x) => x.slug === slug);
     const capacity = row?.capacity ?? 0;
     const taken = row?.taken ?? 0;
@@ -174,14 +330,12 @@ export default function Index() {
     setClaiming(true);
     const status = await enroll(kidId, row.id);
     setClaiming(false);
-    setPendingSlug(null);
+    setConfirming(false);
     const title = WORKSHOPS.find((w) => w.slug === slug)?.workshopTitle ?? slug;
     switch (status) {
       case "ok":
         setEnrolledSlug(slug);
         saveSaved({ enrolledSlug: slug });
-        setJustEnrolled(slug);
-        setDetailsSlug(null);
         break;
       case "full":
         toast.error(`${title} s-a umplut — alege rapid alt atelier.`);
@@ -204,20 +358,15 @@ export default function Index() {
   const opensAtText = useMemo(() => fmtOpensAt(config.opensAt), [config.opensAt]);
   const kidName = kids.find((k) => k.id === kidId)?.nume ?? loadSaved()?.kidName ?? "";
   const enrolledWorkshop = WORKSHOPS.find((w) => w.slug === enrolledSlug);
-  const detailsWorkshop = WORKSHOPS.find((w) => w.slug === detailsSlug);
-  const pendingWorkshop = WORKSHOPS.find((w) => w.slug === pendingSlug);
-
-  const scrollTo = (id: string) =>
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const selectedWorkshop = WORKSHOPS.find((w) => w.slug === selectedSlug);
 
   // ---- Supabase not configured -------------------------------------------
   if (!ready && !loading) {
     return (
-      <main className="min-h-screen bg-primary text-primary-foreground flex items-center justify-center px-6 text-center">
+      <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-6 text-center">
         <div className="max-w-md">
-          <span className="micro-label">Ateliere de Arte Alăturate</span>
-          <h1 className="mt-3 text-3xl font-bold">Configurare necesară</h1>
-          <p className="mt-4 opacity-90">
+          <h1 className="text-2xl font-semibold">Configurare necesară</h1>
+          <p className="mt-3 leading-relaxed">
             Lipsesc variabilele Supabase. Creează un fișier <code>.env</code> cu{" "}
             <code>VITE_SUPABASE_URL</code> și <code>VITE_SUPABASE_ANON_KEY</code>.
           </p>
@@ -226,418 +375,288 @@ export default function Index() {
     );
   }
 
-  // ---- Full-screen success ------------------------------------------------
-  if (justEnrolled && enrolledWorkshop) {
-    return (
-      <main className="min-h-screen bg-primary text-primary-foreground flex items-center justify-center px-6 py-20">
-        <div className="text-center max-w-xl">
-          <CheckCircle2 className="mx-auto h-16 w-16" />
-          <span className="micro-label mt-6 block">Înscriere confirmată</span>
-          <h1 className="mt-3 text-4xl md:text-5xl font-bold tracking-tight">
-            {kidName ? `${kidName}, ` : ""}ești înscris/ă!
-          </h1>
-          <span className="block h-0.5 w-24 bg-white mx-auto mt-6" />
-          <p className="mt-8 text-lg opacity-95">
-            Atelierul tău: <strong>{enrolledWorkshop.workshopTitle}</strong>
-            <br />
-            <span className="opacity-80">cu {enrolledWorkshop.trainer}</span>
-          </p>
-          <p className="mt-4 text-sm opacity-80">
-            Te poți înscrie la un singur atelier — locul tău e rezervat. Ne vedem acolo!
-          </p>
-          <Button variant="secondary" className="mt-8" onClick={() => setJustEnrolled(null)}>
-            Înapoi la pagină
-          </Button>
-        </div>
-      </main>
-    );
-  }
-
-  // ---- Sticky bar ---------------------------------------------------------
-  const renderStickyBar = () => {
-    let content: JSX.Element;
-    if (!kidId) {
-      content = (
-        <div className="flex items-center justify-between gap-3 w-full">
-          <span className="text-sm font-medium">Pasul 1: spune-ne cine ești</span>
-          <Button size="sm" onClick={() => scrollTo("identitate")}>
-            Alege grupa & numele
-          </Button>
-        </div>
-      );
-    } else if (enrolledWorkshop) {
-      content = (
-        <div className="flex items-center gap-2 w-full justify-center font-semibold">
-          <CheckCircle2 className="h-5 w-5" />
-          Ești înscris/ă la: {enrolledWorkshop.workshopTitle}
-        </div>
-      );
-    } else if (!isOpen) {
-      content = (
-        <div className="flex items-center justify-between gap-3 w-full">
-          <span className="text-sm min-w-0 truncate">
-            <strong>{kidName}</strong>, ești gata. Înscrierile se deschid în curând.
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap shrink-0">
-            <Clock className="h-4 w-4" />
-            {msToOpen != null ? fmtCountdown(msToOpen) : "în curând"}
-          </span>
-        </div>
-      );
-    } else {
-      content = (
-        <div className="flex items-center justify-between gap-3 w-full">
-          <span className="text-sm font-semibold">Înscrierile sunt DESCHISE — alege-ți atelierul!</span>
-          <Button size="sm" onClick={() => scrollTo("ateliere")}>
-            Vezi atelierele
-          </Button>
-        </div>
-      );
-    }
-    return (
-      <div className="fixed bottom-0 inset-x-0 z-40 border-t border-white/15 bg-secondary text-secondary-foreground">
-        <div className="max-w-6xl mx-auto px-4 md:px-10 py-3 flex items-center">{content}</div>
-      </div>
-    );
-  };
+  const missingStep = !kidId
+    ? "Alege-ți întâi trupa și numele."
+    : !selectedSlug
+      ? "Alege un atelier din listă."
+      : null;
 
   return (
-    <main className="min-h-screen bg-primary text-primary-foreground pb-28">
-      {/* Header */}
-      <header className="border-b border-white/20">
-        <div className="max-w-6xl mx-auto px-6 md:px-10 py-6 flex items-center justify-between gap-4">
-          <div className="inline-block bg-white p-2">
-            <img src={etichetaLogo} alt="Festivalul ideo ideis" className="h-12 w-auto md:h-14" />
+    <main className="min-h-screen bg-primary">
+      {/* ============================== HERO (roșu) ============================== */}
+      <header className="bg-primary text-primary-foreground">
+        <div className="max-w-4xl mx-auto px-6 md:px-10">
+          {/* eticheta — lipită de marginea de sus, ca pe ideoideis.ro */}
+          <div className="inline-block bg-white px-2.5 pt-3 pb-2.5">
+            <img src={etichetaLogo} alt="Festivalul ideo ideis" className="h-11 w-auto md:h-12" />
           </div>
-          {ready && (
-            <span className="hidden sm:inline-flex items-center gap-2 micro-label">
-              <Radio className="h-3.5 w-3.5 animate-pulse" />
-              Locuri actualizate în timp real
-            </span>
-          )}
-        </div>
-      </header>
 
-      {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 md:px-10 pt-10 md:pt-14">
-        <span className="micro-label">Festivalul ideo ideis #21</span>
-        <h1 className="mt-3 text-4xl md:text-6xl font-bold tracking-tight">
-          Ateliere de Arte Alăturate
-        </h1>
-        <span className="block h-0.5 w-24 bg-white mt-6" />
-        <p className="mt-6 max-w-2xl text-base md:text-lg leading-relaxed opacity-95">
-          Descoperă trainerii și atelierele din acest an. Când se deschid înscrierile, te
-          înscrii direct de aici, dintr-o singură atingere. Fiecare participant se poate
-          înscrie la un singur atelier, iar locurile sunt limitate.
-        </p>
+          <h1 className="mt-10 md:mt-20 text-4xl md:text-6xl font-bold leading-tight">
+            înscrieri:
+            <br />
+            ateliere arte alăturate
+          </h1>
 
-        {/* Status + countdown banner */}
-        <div
-          className={cn(
-            "mt-8 border p-4 md:p-5 flex items-start gap-3",
-            isOpen ? "border-white bg-white text-primary" : "border-white/30 bg-white/10"
-          )}
-        >
-          <span
-            className={cn("mt-1.5 h-2.5 w-2.5 shrink-0", isOpen ? "bg-primary animate-pulse" : "bg-white")}
-            style={{ borderRadius: "9999px" }}
-          />
-          <div className="flex-1">
+          <div className="mt-8 md:mt-10 max-w-xl space-y-4 text-base md:text-lg">
+            <p className="leading-relaxed">
+              Ediția #21 a Festivalului aduce șase ateliere de arte alăturate: scriere
+              dramatică, dans, actorie de film, costume și film.
+            </p>
+            <p className="leading-relaxed">
+              Citește mai jos despre ateliere și înscrie-te la cel potrivit pentru tine.
+            </p>
+            <p className="leading-relaxed opacity-95">
+              Numărul de locuri pentru fiecare atelier este limitat, iar locurile se ocupă în
+              ordinea înscrierilor. Fiecare participant se poate înscrie la un singur atelier.
+              <br />
+              {">>>"} grăbește-te să prinzi loc la atelierul dorit!
+            </p>
             {isOpen ? (
-              <p className="font-bold text-lg">Înscrierile sunt DESCHISE — înscrie-te acum!</p>
+              <p className="leading-relaxed font-semibold">
+                Înscrierile sunt deschise —{" "}
+                <a href="#inscriere" className="underline underline-offset-4">
+                  mergi la formular ↓
+                </a>
+              </p>
             ) : (
-              <>
-                <p className="font-semibold">Înscrierile nu sunt încă deschise.</p>
-                {opensAtText && (
-                  <p className="text-sm opacity-90 mt-0.5">
-                    Se deschid: <strong>{opensAtText}</strong>. Pagina se activează automat.
-                  </p>
-                )}
-                {msToOpen != null && (
-                  <p className="mt-2 inline-flex items-center gap-2 text-3xl md:text-4xl font-bold tabular-nums">
-                    <Clock className="h-7 w-7" />
-                    {fmtCountdown(msToOpen)}
-                  </p>
-                )}
-              </>
+              opensAtText && (
+                <p className="leading-relaxed">
+                  Formularul se deschide automat, {opensAtText}
+                  {msToOpen != null && (
+                    <>
+                      {" — "}
+                      <span className="tabular-nums font-semibold">{fmtCountdown(msToOpen)}</span>
+                    </>
+                  )}
+                  .
+                </p>
+              )
             )}
           </div>
         </div>
-      </section>
 
-      {/* Identity panel */}
-      <section id="identitate" className="max-w-6xl mx-auto px-6 md:px-10 mt-10 scroll-mt-4">
-        <div className="border border-white/15 bg-secondary text-secondary-foreground p-5 md:p-6">
-          <h2 className="text-lg font-semibold">Pasul 1 · Cine ești?</h2>
-          <p className="text-sm opacity-80 mt-1">
-            Alege grupa și numele tău — fă asta din timp ca să fii gata la deschidere.
+        {/* Lista atelierelor */}
+        <nav id="lista" className="max-w-4xl mx-auto px-6 md:px-10 pt-12 pb-14 md:pt-16 md:pb-20 scroll-mt-4">
+          <p className="text-sm text-center opacity-90">
+            Mai jos este o listă cu atelierele de anul acesta, ca să poți naviga ușor.
           </p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 max-w-2xl">
-            <div>
-              <label className="micro-label block mb-2">Grupa</label>
-              <Select value={groupId} onValueChange={handleGroupChange}>
-                <SelectTrigger className="bg-background text-foreground h-12">
-                  <SelectValue placeholder="Alege grupa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {groups.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.nume}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="micro-label block mb-2">Numele tău</label>
-              <Select value={kidId} onValueChange={handleKidChange} disabled={!groupId || kidsLoading}>
-                <SelectTrigger className="bg-background text-foreground h-12">
-                  <SelectValue
-                    placeholder={
-                      !groupId ? "Alege întâi grupa" : kidsLoading ? "Se încarcă…" : "Alege-ți numele"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {kids.map((k) => (
-                    <SelectItem key={k.id} value={k.id}>
-                      {k.nume}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <ul className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-3">
+            {WORKSHOPS.map((w) => (
+              <li key={w.slug}>
+                <a
+                  href={`#${w.slug}`}
+                  className="block bg-white text-primary text-sm font-semibold text-center px-3 py-3 hover:bg-white/90 transition-colors"
+                >
+                  {categoryLabel(w)} ›
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </header>
+
+      {/* ======================= ATELIERELE (secțiuni albe) ====================== */}
+      {WORKSHOPS.map((w) => (
+        <Fragment key={w.slug}>
+          <WorkshopBlock w={w} spots={stateFor(w.slug)} />
+
+          {/* Bandă roșie de separare */}
+          <div className="bg-primary py-8 md:py-10 px-6 text-center">
+            <PillLink href="#lista">înapoi la ateliere ›</PillLink>
+          </div>
+        </Fragment>
+      ))}
+
+      {/* ==================== ÎNSCRIEREA (secțiune închisă) ===================== */}
+      <section id="inscriere" className="bg-secondary text-secondary-foreground scroll-mt-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-10 py-12 md:py-24">
+          <div className="max-w-xl mx-auto bg-card text-card-foreground p-5 sm:p-6 md:p-9">
+            <h2 className="text-3xl md:text-4xl font-bold text-primary">înscrie-te</h2>
+
+            {!isOpen && (
+              <div className="mt-5 border border-border p-4 md:p-5">
+                <p className="leading-relaxed">
+                  Înscrierile <strong>nu sunt încă deschise</strong>.
+                  {opensAtText && <> Formularul se activează automat, {opensAtText}.</>}
+                </p>
+                {msToOpen != null && (
+                  <p className="mt-2 text-3xl md:text-4xl font-semibold tabular-nums text-primary">
+                    {fmtCountdown(msToOpen)}
+                  </p>
+                )}
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Îți poți alege trupa și numele de pe acum, ca să fii gata la deschidere.
+                </p>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="mt-6 flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" /> Se încarcă…
+              </div>
+            ) : enrolledWorkshop ? (
+              <div className="mt-6 border border-primary p-5">
+                <p className="flex items-center gap-2 font-semibold text-primary">
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
+                  {kidName ? `${kidName}, ești înscris/ă!` : "Ești înscris/ă!"}
+                </p>
+                <p className="mt-2 leading-relaxed">
+                  Atelierul tău: <strong>{enrolledWorkshop.workshopTitle}</strong> cu{" "}
+                  {enrolledWorkshop.trainer}. Locul tău e rezervat — ne vedem la festival!
+                </p>
+                {enrolledWorkshop.task && (
+                  <p className="mt-2 leading-relaxed">
+                    Nu uita de{" "}
+                    <a
+                      href={`#${enrolledWorkshop.slug}`}
+                      className="text-primary underline underline-offset-4"
+                    >
+                      tema ta de pregătit ↑
+                    </a>
+                    .
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="mt-6 space-y-7">
+                {/* 1–2: cine ești */}
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">1. Trupa ta</label>
+                    <Select value={groupId} onValueChange={handleGroupChange}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Alege trupa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groups.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>
+                            {g.nume}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">2. Numele tău</label>
+                    <Select
+                      value={kidId}
+                      onValueChange={handleKidChange}
+                      disabled={!groupId || kidsLoading}
+                    >
+                      <SelectTrigger className="h-12">
+                        <SelectValue
+                          placeholder={
+                            !groupId
+                              ? "Alege întâi trupa"
+                              : kidsLoading
+                                ? "Se încarcă…"
+                                : "Alege-ți numele"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {kids.map((k) => (
+                          <SelectItem key={k.id} value={k.id}>
+                            {k.nume}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {kidId && checking && (
+                  <p className="-mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Verificăm înscrierea…
+                  </p>
+                )}
+
+                {/* 3: atelierul */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2">3. Atelierul dorit</label>
+                  <RadioGroup value={selectedSlug} onValueChange={setSelectedSlug} className="gap-2">
+                    {WORKSHOPS.map((w) => {
+                      const s = stateFor(w.slug);
+                      return (
+                        <label
+                          key={w.slug}
+                          htmlFor={`opt-${w.slug}`}
+                          className={cn(
+                            "flex items-center gap-3 border border-border p-3.5 cursor-pointer transition-colors",
+                            selectedSlug === w.slug && "border-primary ring-1 ring-primary",
+                            s.full && "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          <RadioGroupItem value={w.slug} id={`opt-${w.slug}`} disabled={s.full} />
+                          <span className="flex-1 min-w-0">
+                            <span className="block font-semibold leading-snug">
+                              {w.workshopTitle}
+                            </span>
+                            <span className="block text-sm text-muted-foreground">
+                              {w.discipline} · {w.trainer}
+                            </span>
+                          </span>
+                          <span
+                            className={cn(
+                              "text-sm whitespace-nowrap",
+                              s.full ? "text-primary font-semibold" : "text-muted-foreground"
+                            )}
+                          >
+                            {s.row ? (s.full ? "Epuizat" : `${s.remaining} libere`) : ""}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </RadioGroup>
+                </div>
+
+                <div>
+                  <Button
+                    className="w-full h-12 text-base font-semibold"
+                    disabled={!isOpen || !kidId || !selectedSlug || claiming || checking}
+                    onClick={() => setConfirming(true)}
+                  >
+                    {isOpen ? "Înscrie-mă" : "Formularul nu e încă deschis"}
+                  </Button>
+                  {isOpen && missingStep && (
+                    <p className="mt-2 text-sm text-muted-foreground">{missingStep}</p>
+                  )}
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Te poți înscrie la un singur atelier și nu poți schimba alegerea după
+                    confirmare.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {kidId && enrolledWorkshop && (
-            <div className="mt-4 flex items-center gap-2 text-sm font-medium">
-              <CheckCircle2 className="h-4 w-4" />
-              {kidName ? `${kidName}, ești` : "Ești"} înscris/ă la:{" "}
-              <strong>{enrolledWorkshop.workshopTitle}</strong>
-            </div>
-          )}
-          {kidId && checking && (
-            <div className="mt-4 flex items-center gap-2 text-sm opacity-80">
-              <Loader2 className="h-4 w-4 animate-spin" /> Verificăm înscrierea…
-            </div>
-          )}
-          {kidId && !enrolledWorkshop && !checking && (
-            <p className="mt-4 text-sm opacity-90">
-              ✓ Gata, <strong>{kidName}</strong>! Răsfoiește atelierele mai jos.
-            </p>
-          )}
+          <p className="mt-6 text-center text-sm opacity-75">
+            Locurile se actualizează în timp real — nu e nevoie să reîncarci pagina.
+          </p>
         </div>
       </section>
 
-      {/* Workshops */}
-      <section id="ateliere" className="max-w-6xl mx-auto px-6 md:px-10 mt-12 scroll-mt-4">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Trainerii & atelierele</h2>
-        <p className="mt-2 text-sm opacity-90 max-w-2xl">
-          {isOpen
-            ? "Înscrierile sunt deschise — apasă „Înscrie-mă” la atelierul dorit."
-            : "Răsfoiește atelierele. Când se deschid înscrierile, vei putea apăsa „Înscrie-mă” la cel dorit."}
-        </p>
-        <span className="block h-0.5 w-16 bg-white mt-4" />
+      {/* Pastilă plutitoare pe mobil — apare doar când înscrierile sunt deschise */}
+      {isOpen && !enrolledWorkshop && !formInView && (
+        <a
+          href="#inscriere"
+          aria-label="Mergi la formularul de înscriere"
+          className="md:hidden fixed right-4 z-40 bg-secondary text-secondary-foreground text-sm font-semibold px-4 py-2.5 shadow-lg"
+          style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+        >
+          înscrie-te ↓
+        </a>
+      )}
 
-        {loading ? (
-          <div className="mt-10 flex items-center gap-2 opacity-90">
-            <Loader2 className="h-5 w-5 animate-spin" /> Se încarcă atelierele…
-          </div>
-        ) : (
-          <div className="mt-8 grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {WORKSHOPS.map((w) => {
-              const s = stateFor(w.slug);
-              const hasDetails = !!w.bio;
-              const isMine = enrolledSlug === w.slug;
-              const lockedOut = !!enrolledSlug && !isMine;
-              return (
-                <article
-                  key={w.slug}
-                  className={cn(
-                    "flex flex-row md:flex-col bg-card text-card-foreground border border-black/5 overflow-hidden",
-                    isMine && "ring-2 md:ring-4 ring-white",
-                    s.full && !isMine && "opacity-70"
-                  )}
-                >
-                  {/* Photo: compact thumbnail on mobile, full editorial on desktop */}
-                  <div className="relative shrink-0 w-28 sm:w-40 self-stretch md:w-full md:self-auto md:aspect-[4/5] bg-secondary overflow-hidden">
-                    {w.photo ? (
-                      <img
-                        src={photoSrc(w)}
-                        alt={w.trainer}
-                        className="h-full w-full object-cover grayscale"
-                        style={{ objectPosition: w.focal ?? "center top" }}
-                        onError={(e) => {
-                          e.currentTarget.src = `${import.meta.env.BASE_URL}placeholder.svg`;
-                        }}
-                      />
-                    ) : (
-                      <div className="h-full w-full min-h-[8rem] flex items-center justify-center">
-                        <span className="text-[0.6rem] md:text-xs uppercase tracking-widest text-white/40 text-center px-1">
-                          foto în curând
-                        </span>
-                      </div>
-                    )}
-                    {/* desktop-only name overlay */}
-                    <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-secondary via-secondary/15 to-transparent" />
-                    <span className="hidden md:inline-block absolute top-3 left-3 bg-primary text-primary-foreground text-[0.6rem] uppercase tracking-wider font-semibold px-2 py-1">
-                      {w.discipline}
-                    </span>
-                    <div className="hidden md:block absolute bottom-0 left-0 right-0 p-4">
-                      <span className="block text-[0.6rem] uppercase tracking-widest text-white/70">
-                        Trainer
-                      </span>
-                      <p className="text-white text-lg font-bold leading-tight">{w.trainer}</p>
-                    </div>
-                    {s.full && !isMine && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-secondary/55 p-1">
-                        <span className="border border-white md:border-2 text-white font-bold tracking-widest text-[0.6rem] md:text-base leading-tight text-center px-1.5 py-1 md:px-4 md:py-2 -rotate-6">
-                          LOCURI EPUIZATE
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4 md:p-5 flex flex-col flex-1 min-w-0">
-                    {/* mobile-only trainer + discipline (overlaid on photo for desktop) */}
-                    <div className="md:hidden flex items-center gap-2 flex-wrap mb-1">
-                      <span className="bg-primary text-primary-foreground text-[0.55rem] uppercase tracking-wider font-semibold px-1.5 py-0.5">
-                        {w.discipline}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate">{w.trainer}</span>
-                    </div>
-                    <h3 className="text-base md:text-xl font-bold leading-tight">{w.workshopTitle}</h3>
-                    <p className="mt-1 md:mt-2 text-sm text-muted-foreground leading-snug line-clamp-2">
-                      {w.tagline}
-                    </p>
-                    {hasDetails && (
-                      <button
-                        type="button"
-                        onClick={() => setDetailsSlug(w.slug)}
-                        className="mt-2 self-start inline-flex items-center gap-1 text-sm font-semibold text-primary"
-                      >
-                        Vezi detalii →
-                      </button>
-                    )}
-
-                    <div className="mt-auto pt-3 md:pt-5">
-                      {renderSpots(w.slug)}
-                      <div className="mt-4">
-                        {isMine ? (
-                          <div className="flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-primary border border-primary">
-                            <CheckCircle2 className="h-4 w-4" /> Ești înscris/ă aici
-                          </div>
-                        ) : lockedOut ? (
-                          <div className="py-2.5 text-center text-sm text-muted-foreground border border-border">
-                            Te-ai înscris la alt atelier
-                          </div>
-                        ) : isOpen && s.full ? (
-                          <Button className="w-full h-11 text-base font-bold" disabled>
-                            Locuri epuizate
-                          </Button>
-                        ) : isOpen && !kidId ? (
-                          <Button
-                            variant="outline"
-                            className="w-full h-11 text-base font-semibold"
-                            onClick={() => scrollTo("identitate")}
-                          >
-                            Întâi alege-ți numele ↑
-                          </Button>
-                        ) : isOpen ? (
-                          <Button
-                            className="w-full h-11 text-base font-bold"
-                            disabled={claiming}
-                            onClick={() => setPendingSlug(w.slug)}
-                          >
-                            Înscrie-mă
-                          </Button>
-                        ) : (
-                          <div className="py-2.5 text-center text-sm text-muted-foreground border border-dashed border-border">
-                            Înscrieri în curând
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* Details dialog */}
-      <Dialog open={!!detailsSlug} onOpenChange={(o) => !o && setDetailsSlug(null)}>
-        <DialogContent className="max-w-lg max-h-[88vh] overflow-y-auto">
-          {detailsWorkshop && (
-            <div className="space-y-6">
-              {/* Header: portrait + title block */}
-              <DialogHeader className="space-y-0 text-left">
-                <div className="flex gap-4">
-                  <div className="relative w-24 sm:w-28 shrink-0 aspect-[3/4] bg-secondary overflow-hidden">
-                    {detailsWorkshop.photo ? (
-                      <img
-                        src={photoSrc(detailsWorkshop)}
-                        alt={detailsWorkshop.trainer}
-                        className="h-full w-full object-cover grayscale"
-                        style={{ objectPosition: detailsWorkshop.focal ?? "center top" }}
-                        onError={(e) => {
-                          e.currentTarget.src = `${import.meta.env.BASE_URL}placeholder.svg`;
-                        }}
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-[0.55rem] uppercase tracking-widest text-white/40 text-center px-1">
-                        foto în curând
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex flex-col justify-center">
-                    <span className="text-primary text-xs font-bold uppercase tracking-widest">
-                      {detailsWorkshop.discipline}
-                    </span>
-                    <DialogTitle className="mt-1 text-2xl leading-tight">
-                      {detailsWorkshop.workshopTitle}
-                    </DialogTitle>
-                    <p className="mt-1.5 text-sm text-muted-foreground">cu {detailsWorkshop.trainer}</p>
-                  </div>
-                </div>
-              </DialogHeader>
-
-              {/* Live spots */}
-              <div className="border-y border-border py-3">{renderSpots(detailsWorkshop.slug)}</div>
-
-              {/* What you'll do */}
-              <section>
-                <SectionTitle>Ce vom face</SectionTitle>
-                <div className="mt-3">
-                  <Paragraphs text={detailsWorkshop.workshopDescription} />
-                </div>
-              </section>
-
-              {/* About the trainer */}
-              {detailsWorkshop.bio && (
-                <section>
-                  <SectionTitle>Despre trainer</SectionTitle>
-                  <div className="mt-3">
-                    <Paragraphs text={detailsWorkshop.bio} />
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirm dialog */}
-      <AlertDialog open={!!pendingSlug} onOpenChange={(o) => !o && setPendingSlug(null)}>
+      {/* Confirmare finală */}
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmi înscrierea?</AlertDialogTitle>
             <AlertDialogDescription>
               {kidName ? <strong>{kidName}</strong> : "Te înscrii"}, te vei înscrie la{" "}
-              <strong className="text-foreground">{pendingWorkshop?.workshopTitle}</strong>. Te poți
-              înscrie la un singur atelier și nu mai poți schimba după confirmare.
+              <strong className="text-foreground">{selectedWorkshop?.workshopTitle}</strong> cu{" "}
+              {selectedWorkshop?.trainer}. Te poți înscrie la un singur atelier și nu mai poți
+              schimba după confirmare.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -645,7 +664,7 @@ export default function Index() {
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                if (pendingSlug) claim(pendingSlug);
+                if (selectedSlug) claim(selectedSlug);
               }}
               disabled={claiming}
             >
@@ -660,30 +679,6 @@ export default function Index() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {renderStickyBar()}
     </main>
   );
-
-  function renderSpots(slug: string) {
-    const s = stateFor(slug);
-    return (
-      <div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-            <Users className="h-4 w-4" /> Locuri
-          </span>
-          <span className={cn("font-semibold", s.full && "text-primary")}>
-            {s.full ? "Epuizate" : `${s.remaining} din ${s.capacity} libere`}
-          </span>
-        </div>
-        <div className="mt-2 h-1.5 w-full bg-muted">
-          <div
-            className="h-full bg-primary transition-all"
-            style={{ width: s.capacity > 0 ? `${(s.taken / s.capacity) * 100}%` : "0%" }}
-          />
-        </div>
-      </div>
-    );
-  }
 }
