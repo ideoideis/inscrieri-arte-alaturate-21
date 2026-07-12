@@ -13,8 +13,8 @@ Open the Supabase SQL Editor for the project and run, in order:
 2. `migrations/002_seed_workshops.sql`: workshop titles + **capacities**
    (keep the `slug`s in sync with `src/data/workshops.ts`).
 3. `migrations/003_seed_roster.sql`: the real roster (coordinators excluded).
-   7 troupes with names (~95 kids) + Trupa din Alexandria (names TBD: add a
-   block when available). Re-runnable; also removes the old example rows.
+   7 troupes with names (~95 kids); Trupa din Alexandria nu participă la #21.
+   Re-runnable; also removes the old example rows.
 
 ## How the guarantees work
 

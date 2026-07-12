@@ -19,9 +19,11 @@ insert into public.aa_groups (nume, sort) values
   ('A.C.T - Bacău',                      4),
   ('Amprente - Brașov',                  5),
   ('Trupa Leira - Râmnicu Vâlcea',       6),
-  ('Protha - Panciu',                    7),
-  ('Trupa din Alexandria',               8)  -- names TBD; add when available
+  ('Protha - Panciu',                    7)
 on conflict (nume) do nothing;
+
+-- Trupa din Alexandria a fost scoasă din ediția #21 (nu participă).
+delete from public.aa_groups where nume = 'Trupa din Alexandria';
 
 -- --- Helper: insert a kid into a group by group name -------------------------
 -- Each block cross-joins the group row with a VALUES list of names.
@@ -104,6 +106,3 @@ select g.id, k.nume from public.aa_groups g cross join (values
 ) as k(nume)
 where g.nume = 'Protha - Panciu'
 on conflict (group_id, nume) do nothing;
-
--- Trupa din Alexandria: no participant names provided yet.
--- When you have them, add a block like the ones above.
