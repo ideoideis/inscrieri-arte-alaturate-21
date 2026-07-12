@@ -11,6 +11,12 @@
 --      pagina va afișa countdown-ul și se va activa singură.
 -- ==============================================================
 
+-- 0) Corecturi roster (idempotent; redenumește rândul existent) ---------------
+update public.aa_kids
+   set nume = 'Costandache Cristina'
+ where nume = 'Banciu Andrei'
+   and group_id = (select id from public.aa_groups where nume = 'Protha - Panciu');
+
 -- 1) Curăță ------------------------------------------------------------------
 delete from public.aa_enrollments;
 update public.aa_workshops set taken = 0;

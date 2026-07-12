@@ -97,7 +97,7 @@ on conflict (group_id, nume) do nothing;
 insert into public.aa_kids (group_id, nume)
 select g.id, k.nume from public.aa_groups g cross join (values
   ('Zbîrciog Alina'),('Găman Andreea Patricia'),('Matei Georgiana Dănuța'),
-  ('Pleșcan Melania Valentina'),('Melinte Miruna Cosmina'),('Banciu Andrei'),
+  ('Pleșcan Melania Valentina'),('Melinte Miruna Cosmina'),('Costandache Cristina'),
   ('Manovici Teodor Andrei'),('Ignat David Raul'),('Popoiu Gabriel'),
   ('Vasile Alexandru'),('Roșu Bogdan Ionuț'),('Crucianu Teodor Ionuț'),
   ('Drăgan Denisa Maria'),('Drăgan Andreea')
