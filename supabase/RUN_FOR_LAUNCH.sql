@@ -2,13 +2,13 @@
 -- LANSAREA ÎNSCRIERILOR #21: rulează ASTA în Supabase SQL editor.
 --
 -- !!! Rulează O SINGURĂ DATĂ, ÎNAINTE de deschidere (înainte de
--- miercuri, 15 iulie 2026, 16:00). NU-l rula după ce s-au deschis
+-- joi, 16 iulie 2026, 16:00). NU-l rula după ce s-au deschis
 -- înscrierile: pasul 1 șterge TOATE înscrierile existente!
 --
 -- Face, în ordine:
 --   1. curăță înscrierile de test (stress-testul din iulie);
 --   2. aduce lineup-ul final + capacitățile (identic cu 002_seed_workshops.sql);
---   3. programează deschiderea: miercuri, 15 iulie 2026, 16:00 (ora României).
+--   3. programează deschiderea: joi, 16 iulie 2026, 16:00 (ora României).
 --      Pagina afișează singură countdown-ul și se activează automat la fix.
 -- ==============================================================
 
@@ -43,9 +43,9 @@ on conflict (slug) do update
       capacity = excluded.capacity,
       sort = excluded.sort;
 
--- 3) Programează deschiderea: miercuri, 15 iulie 2026, 16:00 (EEST) ------------
+-- 3) Programează deschiderea: joi, 16 iulie 2026, 16:00 (EEST) ---------------
 update public.aa_config
-   set opens_at        = '2026-07-15 16:00:00+03',
+   set opens_at        = '2026-07-16 16:00:00+03',
        enrollment_open = false,
        force_closed    = false,
        updated_at      = now()

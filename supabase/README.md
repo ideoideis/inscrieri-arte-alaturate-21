@@ -42,7 +42,7 @@ Cu pagina nouă **publicată** (push pe `main` → GitHub Pages):
 6. Verifică: pe laptop contorul atelierului scade **live**; alege același copil
    pe laptop → apare „ești deja înscris/ă”.
 7. La final rulează [`RUN_FOR_LAUNCH.sql`](RUN_FOR_LAUNCH.sql): șterge testul și
-   programează deschiderea reală (miercuri, 15 iulie, 16:00).
+   programează deschiderea reală (joi, 16 iulie, 16:00).
 
 ## Opening / closing enrollment
 
@@ -54,12 +54,12 @@ on the page and inside `aa_enroll()`, so the schedule can't be bypassed.
 instant on every browser (with a live countdown), no manual flip needed. Note the
 timezone: Romania is `+03` in summer (EEST).
 
-**Pentru lansarea #21 (miercuri, 15 iulie 2026, 16:00) rulează
+**Pentru lansarea #21 (joi, 16 iulie 2026, 16:00) rulează
 [`RUN_FOR_LAUNCH.sql`](RUN_FOR_LAUNCH.sql)**: curăță datele de test, aduce
 lineup-ul final și programează deschiderea, totul într-un singur script.
 
 ```sql
-update aa_config set opens_at = '2026-07-15 16:00:00+03',
+update aa_config set opens_at = '2026-07-16 16:00:00+03',
                      enrollment_open = false, force_closed = false, updated_at = now()
 where id = 1;
 ```
