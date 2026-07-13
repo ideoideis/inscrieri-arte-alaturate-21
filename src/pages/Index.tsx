@@ -278,13 +278,23 @@ export default function Index() {
 
   useEffect(() => {
     const s = loadSaved();
-    if (s) {
-      setGroupId(s.groupId);
-      setKidId(s.kidId);
-      setEnrolledSlug(s.enrolledSlug);
-      if (s.groupId) loadKids(s.groupId).then(setKids);
+    if (!s) return;
+    setGroupId(s.groupId);
+    setKidId(s.kidId);
+    setEnrolledSlug(s.enrolledSlug);
+    if (s.groupId) loadKids(s.groupId).then(setKids);
+    // Starea „ești înscris/ă” din localStorage e doar un cache: adevărul e în
+    // baza de date (înscrierile de test se șterg), deci o re-verificăm la
+    // fiecare încărcare și corectăm ce am afișat optimist mai sus.
+    if (s.kidId) {
+      setChecking(true);
+      kidEnrollment(s.kidId).then((slug) => {
+        setEnrolledSlug(slug);
+        saveSaved({ enrolledSlug: slug });
+        setChecking(false);
+      });
     }
-  }, [loadKids]);
+  }, [loadKids, kidEnrollment]);
 
   const handleGroupChange = async (value: string) => {
     setGroupId(value);
